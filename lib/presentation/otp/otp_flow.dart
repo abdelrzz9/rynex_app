@@ -341,7 +341,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       _controllers[i].text = i < digits.length ? digits[i] : '';
     }
     final focusIndex = digits.length >= _otpLength ? _otpLength - 1 : digits.length;
-    final clampedFocusIndex = focusIndex.clamp(0, _otpLength - 1) as int;
+    final clampedFocusIndex = focusIndex.clamp(0, _otpLength - 1);
     _focusNodes[clampedFocusIndex].requestFocus();
     if (digits.length >= _otpLength) _verify();
   }
