@@ -1,20 +1,29 @@
 import 'package:flutter/material.dart';
 
+import 'data/repositories/in_memory_otp_repository.dart';
 import 'data/repositories/local_auth_repository.dart';
 import 'domain/entities/local_user.dart';
 import 'domain/repositories/auth_repository.dart';
+import 'domain/repositories/otp_repository.dart';
+import 'presentation/otp/otp_flow.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final authStore = LocalAuthRepository();
   await authStore.load();
-  runApp(DrawingApp(authStore: authStore));
+  final otpRepository = InMemoryOtpRepository();
+  runApp(DrawingApp(authStore: authStore, otpRepository: otpRepository));
 }
 
 class DrawingApp extends StatefulWidget {
-  const DrawingApp({required this.authStore, super.key});
+  const DrawingApp({
+    required this.authStore,
+    required this.otpRepository,
+    super.key,
+  });
 
   final AuthRepository authStore;
+  final OtpRepository otpRepository;
 
   @override
   State<DrawingApp> createState() => _DrawingAppState();
@@ -53,6 +62,7 @@ class _DrawingAppState extends State<DrawingApp> {
       ),
       home: AuthGate(
         authStore: widget.authStore,
+        otpRepository: widget.otpRepository,
         isDarkMode: _isDarkMode,
         onDarkModeChanged: _setDarkMode,
       ),
@@ -63,12 +73,14 @@ class _DrawingAppState extends State<DrawingApp> {
 class AuthGate extends StatefulWidget {
   const AuthGate({
     required this.authStore,
+    required this.otpRepository,
     required this.isDarkMode,
     required this.onDarkModeChanged,
     super.key,
   });
 
   final AuthRepository authStore;
+  final OtpRepository otpRepository;
   final bool isDarkMode;
   final ValueChanged<bool> onDarkModeChanged;
 
@@ -78,6 +90,7 @@ class AuthGate extends StatefulWidget {
 
 class _AuthGateState extends State<AuthGate> {
   late String? _signedInEmail;
+  String? _verifiedPhoneNumber;
 
   @override
   void initState() {
@@ -95,25 +108,54 @@ class _AuthGateState extends State<AuthGate> {
     setState(() => _signedInEmail = null);
   }
 
+  void _onPhoneVerified(String phoneNumber) {
+    setState(() => _verifiedPhoneNumber = phoneNumber);
+  }
+
+  void _restartOtpFlow() {
+    widget.otpRepository.clear();
+    setState(() => _verifiedPhoneNumber = null);
+  }
+
   @override
   Widget build(BuildContext context) {
     final signedInEmail = _signedInEmail;
     if (signedInEmail == null) {
-      return AuthScreen(
-        authStore: widget.authStore,
+      final verifiedPhoneNumber = _verifiedPhoneNumber;
+      if (verifiedPhoneNumber != null) {
+        return OtpSuccessScreen(
+          phoneNumber: verifiedPhoneNumber,
+          isDarkMode: widget.isDarkMode,
+          onDarkModeChanged: widget.onDarkModeChanged,
+          onStartOver: _restartOtpFlow,
+        );
+      }
+
+      return PhoneNumberScreen(
+        otpRepository: widget.otpRepository,
         isDarkMode: widget.isDarkMode,
         onDarkModeChanged: widget.onDarkModeChanged,
-        onAuthenticated: _onAuthenticated,
+        onVerified: _onPhoneVerified,
       );
     }
 
     final currentUser = widget.authStore.currentUser;
     if (currentUser == null) {
-      return AuthScreen(
-        authStore: widget.authStore,
+      final verifiedPhoneNumber = _verifiedPhoneNumber;
+      if (verifiedPhoneNumber != null) {
+        return OtpSuccessScreen(
+          phoneNumber: verifiedPhoneNumber,
+          isDarkMode: widget.isDarkMode,
+          onDarkModeChanged: widget.onDarkModeChanged,
+          onStartOver: _restartOtpFlow,
+        );
+      }
+
+      return PhoneNumberScreen(
+        otpRepository: widget.otpRepository,
         isDarkMode: widget.isDarkMode,
         onDarkModeChanged: widget.onDarkModeChanged,
-        onAuthenticated: _onAuthenticated,
+        onVerified: _onPhoneVerified,
       );
     }
 
