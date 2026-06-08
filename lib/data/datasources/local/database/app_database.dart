@@ -115,7 +115,7 @@ class AppDatabase {
     try {
       statement.execute(_elementParameters(scopedElement));
     } finally {
-      statement.dispose();
+      statement.close();
     }
     await _emitChanges();
   }
@@ -127,7 +127,7 @@ class AppDatabase {
     try {
       statement.execute(_elementParameters(scopedElement));
     } finally {
-      statement.dispose();
+      statement.close();
     }
     await _emitChanges();
   }
@@ -143,7 +143,7 @@ class AppDatabase {
         scopedElement.id,
       ]);
     } finally {
-      statement.dispose();
+      statement.close();
     }
 
     final updated = db.updatedRows > 0;
@@ -192,7 +192,7 @@ class AppDatabase {
 
   Future<void> close() async {
     final db = await _database;
-    db.dispose();
+    db.close();
     await _changes.close();
   }
 
