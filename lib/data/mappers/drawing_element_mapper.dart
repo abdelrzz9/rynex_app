@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:drift/drift.dart';
-import 'package:flutter/material.dart';
 
 import '../../domain/entities/drawing_element.dart';
+import '../../domain/entities/color_serialization.dart';
 import '../../domain/entities/stroke_element.dart';
 import '../../domain/entities/rect_element.dart';
 import '../../domain/entities/line_element.dart';
@@ -21,12 +21,12 @@ abstract final class DrawingElementMapper {
   /// Convert a Domain Entity into a DB Companion for inserts/updates
   static DrawingElementsTableCompanion toCompanion(DrawingElement entity) {
     final jsonStr = jsonEncode(entity.toJson());
-    
+
     // Base companion with shared fields
     var companion = DrawingElementsTableCompanion(
       id: Value(entity.id),
       type: Value(entity.type.name),
-      color: Value(entity.color.value),
+      color: Value(colorToJson(entity.color)),
       strokeWidth: Value(entity.strokeWidth),
       positionX: Value(entity.position.dx),
       positionY: Value(entity.position.dy),
