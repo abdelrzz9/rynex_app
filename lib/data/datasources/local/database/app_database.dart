@@ -219,6 +219,7 @@ class AppDatabase {
     db.execute('PRAGMA foreign_keys = ON;');
     db.execute(_createTableSql);
     _ensureAccountNumberColumn(db);
+    _ensureAccountScopedPrimaryKey(db);
     db.execute(_createAccountIndexSql);
     db.execute(_createZIndexSql);
     db.execute(_createStrokeBoundsSql);
@@ -235,6 +236,34 @@ class AppDatabase {
         'ADD COLUMN account_number INTEGER NOT NULL DEFAULT 1;',
       );
     }
+  }
+
+  static void _ensureAccountScopedPrimaryKey(Database db) {
+    final columns = db.select('PRAGMA table_info(drawing_elements);');
+    final accountPk = _primaryKeyPosition(columns, 'account_number');
+    final idPk = _primaryKeyPosition(columns, 'id');
+    if (accountPk == 1 && idPk == 2) return;
+
+    db.execute('BEGIN IMMEDIATE;');
+    try {
+      db.execute('ALTER TABLE drawing_elements RENAME TO drawing_elements_old;');
+      db.execute(_createTableSql);
+      db.execute(_copyLegacyRowsSql);
+      db.execute('DROP TABLE drawing_elements_old;');
+      db.execute('COMMIT;');
+    } catch (_) {
+      db.execute('ROLLBACK;');
+      rethrow;
+    }
+  }
+
+  static int _primaryKeyPosition(ResultSet columns, String columnName) {
+    for (final column in columns) {
+      if (column['name'] == columnName) {
+        return column['pk'] as int;
+      }
+    }
+    return 0;
   }
 
   static DrawingElementsTableData _rowToElement(Row row) {
@@ -526,7 +555,7 @@ class DrawingElementsTableCompanion {
 const String _createTableSql = '''
 CREATE TABLE IF NOT EXISTS drawing_elements (
   account_number INTEGER NOT NULL DEFAULT 1,
-  id TEXT NOT NULL PRIMARY KEY,
+  id TEXT NOT NULL,
   type TEXT NOT NULL,
   color INTEGER NOT NULL,
   stroke_width REAL NOT NULL,
@@ -542,9 +571,54 @@ CREATE TABLE IF NOT EXISTS drawing_elements (
   stroke_min_x REAL,
   stroke_min_y REAL,
   stroke_max_x REAL,
-  stroke_max_y REAL
+  stroke_max_y REAL,
+  PRIMARY KEY (account_number, id)
 );
 ''';
+
+const String _copyLegacyRowsSql = '''
+INSERT OR IGNORE INTO drawing_elements (
+  account_number,
+  id,
+  type,
+  color,
+  stroke_width,
+  position_x,
+  position_y,
+  z_index,
+  created_at,
+  geometry_json,
+  rect_width,
+  rect_height,
+  line_end_x,
+  line_end_y,
+  stroke_min_x,
+  stroke_min_y,
+  stroke_max_x,
+  stroke_max_y
+)
+SELECT
+  account_number,
+  id,
+  type,
+  color,
+  stroke_width,
+  position_x,
+  position_y,
+  z_index,
+  created_at,
+  geometry_json,
+  rect_width,
+  rect_height,
+  line_end_x,
+  line_end_y,
+  stroke_min_x,
+  stroke_min_y,
+  stroke_max_x,
+  stroke_max_y
+FROM drawing_elements_old;
+''';
+
 
 const String _createAccountIndexSql = '''
 CREATE INDEX IF NOT EXISTS idx_elements_account
@@ -592,8 +666,7 @@ INSERT INTO drawing_elements (
 ''';
 
 const String _upsertConflictSql = '''
-ON CONFLICT(id) DO UPDATE SET
-  account_number = excluded.account_number,
+ON CONFLICT(account_number, id) DO UPDATE SET
   type = excluded.type,
   color = excluded.color,
   stroke_width = excluded.stroke_width,
