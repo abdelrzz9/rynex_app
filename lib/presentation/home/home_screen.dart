@@ -8,19 +8,15 @@ import '../shared/account_avatar.dart';
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     required this.currentUser,
-    required this.users,
     required this.isDarkMode,
     required this.onDarkModeChanged,
-    required this.onSwitchAccount,
     required this.onLogout,
     super.key,
   });
 
   final LocalUser currentUser;
-  final List<LocalUser> users;
   final bool isDarkMode;
   final ValueChanged<bool> onDarkModeChanged;
-  final ValueChanged<String> onSwitchAccount;
   final VoidCallback onLogout;
 
   @override
@@ -32,7 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
   Future<void> _showAccountSwitcher() async {
-    final selectedEmail = await showModalBottomSheet<String>(
+    await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       builder: (context) {
@@ -44,25 +40,24 @@ class _HomeScreenState extends State<HomeScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
                 child: Text(
-                  'Switch account',
+                  'Account',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
-              for (final user in widget.users)
-                ListTile(
-                  leading: AccountAvatar(user: user),
-                  title: Text(user.name.isEmpty ? user.email : user.name),
-                  subtitle: Text(user.email),
-                  trailing: user.email == widget.currentUser.email
-                      ? const Icon(Icons.check_circle)
-                      : null,
-                  onTap: () => Navigator.of(context).pop(user.email),
+              ListTile(
+                leading: AccountAvatar(user: widget.currentUser),
+                title: Text(
+                  widget.currentUser.name.isEmpty
+                      ? widget.currentUser.email
+                      : widget.currentUser.name,
                 ),
+                subtitle: Text(widget.currentUser.email),
+              ),
               const Divider(),
               ListTile(
                 leading: const CircleAvatar(child: Icon(Icons.logout)),
                 title: const Text('Log out'),
-                subtitle: const Text('Return to email verification.'),
+                subtitle: const Text('Return to local account unlock.'),
                 onTap: () {
                   Navigator.of(context).pop();
                   widget.onLogout();
@@ -73,11 +68,6 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
     );
-
-    if (selectedEmail == null || selectedEmail == widget.currentUser.email) {
-      return;
-    }
-    widget.onSwitchAccount(selectedEmail);
   }
 
   @override
@@ -91,7 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           IconButton(
-            tooltip: 'Switch account',
+            tooltip: 'Account',
             onPressed: _showAccountSwitcher,
             icon: AccountAvatar(user: widget.currentUser, radius: 16),
           ),
