@@ -1,15 +1,12 @@
-import 'dart:convert';
-import 'dart:io';
-import 'dart:math';
-
-import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
-import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
+
+import 'data/repositories/local_auth_repository.dart';
+import 'domain/entities/local_user.dart';
+import 'domain/repositories/auth_repository.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final authStore = LocalAuthStore();
+  final authStore = LocalAuthRepository();
   await authStore.load();
   runApp(DrawingApp(authStore: authStore));
 }
@@ -17,7 +14,7 @@ Future<void> main() async {
 class DrawingApp extends StatefulWidget {
   const DrawingApp({required this.authStore, super.key});
 
-  final LocalAuthStore authStore;
+  final AuthRepository authStore;
 
   @override
   State<DrawingApp> createState() => _DrawingAppState();
@@ -71,7 +68,7 @@ class AuthGate extends StatefulWidget {
     super.key,
   });
 
-  final LocalAuthStore authStore;
+  final AuthRepository authStore;
   final bool isDarkMode;
   final ValueChanged<bool> onDarkModeChanged;
 
@@ -110,10 +107,22 @@ class _AuthGateState extends State<AuthGate> {
       );
     }
 
+    final currentUser = widget.authStore.currentUser;
+    if (currentUser == null) {
+      return AuthScreen(
+        authStore: widget.authStore,
+        isDarkMode: widget.isDarkMode,
+        onDarkModeChanged: widget.onDarkModeChanged,
+        onAuthenticated: _onAuthenticated,
+      );
+    }
+
     return DrawingCanvas(
-      email: signedInEmail,
+      currentUser: currentUser,
+      users: widget.authStore.users,
       isDarkMode: widget.isDarkMode,
       onDarkModeChanged: widget.onDarkModeChanged,
+      onSwitchAccount: _onAuthenticated,
       onLogout: _logout,
     );
   }
@@ -128,7 +137,7 @@ class AuthScreen extends StatefulWidget {
     super.key,
   });
 
-  final LocalAuthStore authStore;
+  final AuthRepository authStore;
   final bool isDarkMode;
   final ValueChanged<bool> onDarkModeChanged;
   final ValueChanged<String> onAuthenticated;
@@ -310,7 +319,9 @@ class _AuthScreenState extends State<AuthScreen> {
                           child: _isSubmitting
                               ? const SizedBox.square(
                                   dimension: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 )
                               : Text(_isSignUp ? 'Sign up' : 'Log in'),
                         ),
@@ -337,18 +348,49 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 }
 
+class AccountAvatar extends StatelessWidget {
+  const AccountAvatar({required this.user, this.radius = 20, super.key});
+
+  final LocalUser user;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final backgroundColor = user.avatarMaterialColor;
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: backgroundColor,
+      child: Text(
+        user.initials,
+        style: TextStyle(
+          color: ThemeData.estimateBrightnessForColor(backgroundColor) ==
+                  Brightness.dark
+              ? Colors.white
+              : Colors.black,
+          fontWeight: FontWeight.w700,
+          fontSize: radius * 0.75,
+        ),
+      ),
+    );
+  }
+}
+
 class DrawingCanvas extends StatefulWidget {
   const DrawingCanvas({
-    required this.email,
+    required this.currentUser,
+    required this.users,
     required this.isDarkMode,
     required this.onDarkModeChanged,
+    required this.onSwitchAccount,
     required this.onLogout,
     super.key,
   });
 
-  final String email;
+  final LocalUser currentUser;
+  final List<LocalUser> users;
   final bool isDarkMode;
   final ValueChanged<bool> onDarkModeChanged;
+  final ValueChanged<String> onSwitchAccount;
   final VoidCallback onLogout;
 
   @override
@@ -356,8 +398,66 @@ class DrawingCanvas extends StatefulWidget {
 }
 
 class _DrawingCanvasState extends State<DrawingCanvas> {
-  final List<List<Offset>> _strokes = [];
+  List<List<Offset>> _strokes = [];
   List<Offset> _currentStroke = [];
+
+  @override
+  void didUpdateWidget(covariant DrawingCanvas oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.currentUser.email != widget.currentUser.email) {
+      _strokes = [];
+      _currentStroke = [];
+    }
+  }
+
+  Future<void> _showAccountSwitcher() async {
+    final selectedEmail = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.only(bottom: 16),
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                child: Text(
+                  'Switch account',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              for (final user in widget.users)
+                ListTile(
+                  leading: AccountAvatar(user: user),
+                  title: Text(user.name.isEmpty ? user.email : user.name),
+                  subtitle: Text(user.email),
+                  trailing: user.email == widget.currentUser.email
+                      ? const Icon(Icons.check_circle)
+                      : null,
+                  onTap: () => Navigator.of(context).pop(user.email),
+                ),
+              const Divider(),
+              ListTile(
+                leading: const CircleAvatar(child: Icon(Icons.person_add_alt)),
+                title: const Text('Use another account'),
+                subtitle: const Text('Log out, then sign up or log in.'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  widget.onLogout();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (selectedEmail == null || selectedEmail == widget.currentUser.email) {
+      return;
+    }
+    widget.onSwitchAccount(selectedEmail);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -370,8 +470,13 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
     return Scaffold(
       backgroundColor: canvasColor,
       appBar: AppBar(
-        title: Text('Drawing • ${widget.email}'),
+        title: Text('Drawing • ${widget.currentUser.email}'),
         actions: [
+          IconButton(
+            tooltip: 'Switch account',
+            onPressed: _showAccountSwitcher,
+            icon: AccountAvatar(user: widget.currentUser, radius: 16),
+          ),
           IconButton(
             tooltip: widget.isDarkMode ? 'Use light mode' : 'Use dark mode',
             onPressed: () => widget.onDarkModeChanged(!widget.isDarkMode),
@@ -380,7 +485,7 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
           IconButton(
             tooltip: 'Clear canvas',
             onPressed: () => setState(() {
-              _strokes.clear();
+              _strokes = [];
               _currentStroke = [];
             }),
             icon: const Icon(Icons.delete_outline),
@@ -402,7 +507,7 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
             },
             onPanUpdate: (details) {
               setState(() {
-                _currentStroke.add(details.localPosition);
+                _currentStroke = [..._currentStroke, details.localPosition];
               });
             },
             onPanEnd: (_) {
@@ -490,158 +595,4 @@ class CanvasPainter extends CustomPainter {
         oldDelegate.currentStroke != currentStroke ||
         oldDelegate.strokeColor != strokeColor;
   }
-}
-
-class LocalAuthStore {
-  static const _fileName = 'rynex_local_auth.json';
-
-  final Map<String, LocalUser> _users = {};
-  bool _isDarkMode = false;
-  String? _currentUserEmail;
-  File? _file;
-
-  bool get isDarkMode => _isDarkMode;
-  String? get currentUserEmail => _currentUserEmail;
-
-  Future<void> load() async {
-    final directory = await getApplicationDocumentsDirectory();
-    _file = File(path.join(directory.path, _fileName));
-
-    final file = _file!;
-    if (!await file.exists()) {
-      await _save();
-      return;
-    }
-
-    final rawData = await file.readAsString();
-    if (rawData.trim().isEmpty) return;
-
-    final data = jsonDecode(rawData) as Map<String, dynamic>;
-    _isDarkMode = data['isDarkMode'] as bool? ?? false;
-    _currentUserEmail = data['currentUserEmail'] as String?;
-
-    final usersData = data['users'] as Map<String, dynamic>? ?? {};
-    _users
-      ..clear()
-      ..addAll(
-        usersData.map(
-          (email, userData) => MapEntry(
-            email,
-            LocalUser.fromJson(userData as Map<String, dynamic>),
-          ),
-        ),
-      );
-
-    if (_currentUserEmail != null && !_users.containsKey(_currentUserEmail)) {
-      _currentUserEmail = null;
-      await _save();
-    }
-  }
-
-  Future<void> signUp({
-    required String name,
-    required String email,
-    required String password,
-  }) async {
-    final normalizedEmail = email.trim().toLowerCase();
-    if (_users.containsKey(normalizedEmail)) {
-      throw const LocalAuthException('An account already exists for this email.');
-    }
-
-    final salt = _createSalt();
-    _users[normalizedEmail] = LocalUser(
-      name: name.trim(),
-      email: normalizedEmail,
-      passwordSalt: salt,
-      passwordHash: _hashPassword(password, salt),
-    );
-    _currentUserEmail = normalizedEmail;
-    await _save();
-  }
-
-  Future<void> login({required String email, required String password}) async {
-    final normalizedEmail = email.trim().toLowerCase();
-    final user = _users[normalizedEmail];
-    if (user == null || user.passwordHash != _hashPassword(password, user.passwordSalt)) {
-      throw const LocalAuthException('Email or password is incorrect.');
-    }
-
-    _currentUserEmail = normalizedEmail;
-    await _save();
-  }
-
-  Future<void> setCurrentUser(String email) async {
-    _currentUserEmail = email.trim().toLowerCase();
-    await _save();
-  }
-
-  Future<void> logout() async {
-    _currentUserEmail = null;
-    await _save();
-  }
-
-  Future<void> setDarkMode(bool value) async {
-    _isDarkMode = value;
-    await _save();
-  }
-
-  String _createSalt() {
-    final random = Random.secure();
-    final values = List<int>.generate(16, (_) => random.nextInt(256));
-    return base64UrlEncode(values);
-  }
-
-  String _hashPassword(String password, String salt) {
-    return sha256.convert(utf8.encode('$salt:$password')).toString();
-  }
-
-  Future<void> _save() async {
-    final file = _file;
-    if (file == null) return;
-
-    final data = {
-      'isDarkMode': _isDarkMode,
-      'currentUserEmail': _currentUserEmail,
-      'users': _users.map((email, user) => MapEntry(email, user.toJson())),
-    };
-    await file.writeAsString(const JsonEncoder.withIndent('  ').convert(data));
-  }
-}
-
-class LocalUser {
-  const LocalUser({
-    required this.name,
-    required this.email,
-    required this.passwordSalt,
-    required this.passwordHash,
-  });
-
-  final String name;
-  final String email;
-  final String passwordSalt;
-  final String passwordHash;
-
-  factory LocalUser.fromJson(Map<String, dynamic> json) {
-    return LocalUser(
-      name: json['name'] as String? ?? '',
-      email: json['email'] as String? ?? '',
-      passwordSalt: json['passwordSalt'] as String? ?? '',
-      passwordHash: json['passwordHash'] as String? ?? '',
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'email': email,
-      'passwordSalt': passwordSalt,
-      'passwordHash': passwordHash,
-    };
-  }
-}
-
-class LocalAuthException implements Exception {
-  const LocalAuthException(this.message);
-
-  final String message;
 }
