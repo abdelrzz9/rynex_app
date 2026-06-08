@@ -15,27 +15,29 @@ class LocalAuthRepository implements AuthRepository {
 
   final Map<String, LocalUser> _users = {};
   bool _isDarkMode = false;
-  String? _currentUserEmail;
+  String? _currentUsername;
   File? _file;
 
   @override
   bool get isDarkMode => _isDarkMode;
 
   @override
-  String? get currentUserEmail => _currentUserEmail;
+  String? get currentUsername => _currentUsername;
 
   @override
   LocalUser? get currentUser {
-    final email = _currentUserEmail;
-    if (email == null) return null;
-    return _users[email];
+    final username = _currentUsername;
+    if (username == null) return null;
+    return _users[username];
   }
 
   @override
   List<LocalUser> get users {
     final values = _users.values.toList(growable: false);
     values.sort(
-      (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      (a, b) => a.displayName.toLowerCase().compareTo(
+        b.displayName.toLowerCase(),
+      ),
     );
     return values;
   }
@@ -56,96 +58,115 @@ class LocalAuthRepository implements AuthRepository {
 
     final data = jsonDecode(rawData) as Map<String, dynamic>;
     _isDarkMode = data['isDarkMode'] as bool? ?? false;
-    _currentUserEmail = data['currentUserEmail'] as String?;
+    _currentUsername = (data['currentUsername'] as String?)?.trim().toLowerCase();
 
+    final legacyCurrentEmail = data['currentUserEmail'] as String?;
     final usersData = data['users'] as Map<String, dynamic>? ?? {};
-    _users
-      ..clear()
-      ..addAll(
-        usersData.map(
-          (email, userData) => MapEntry(
-            email,
-            LocalUser.fromJson(userData as Map<String, dynamic>),
-          ),
-        ),
-      );
+    _users.clear();
 
-    if (_currentUserEmail != null && !_users.containsKey(_currentUserEmail)) {
-      _currentUserEmail = null;
-      await _save();
+    for (final entry in usersData.entries) {
+      final user = LocalUser.fromJson(entry.value as Map<String, dynamic>);
+      final username = user.username.trim().toLowerCase();
+      if (username.isNotEmpty) {
+        _users[username] = user;
+      }
     }
+
+    if (_currentUsername == null && legacyCurrentEmail != null) {
+      _currentUsername = _usernameForLegacyEmail(legacyCurrentEmail);
+    }
+
+    if (_currentUsername != null && !_users.containsKey(_currentUsername)) {
+      _currentUsername = null;
+    }
+
+    await _save();
   }
 
   @override
   Future<void> signUp({
+    required String username,
     required String name,
     required String email,
     required String password,
   }) async {
+    final normalizedUsername = _normalizeUsername(username);
     final normalizedEmail = email.trim().toLowerCase();
-    if (_users.containsKey(normalizedEmail)) {
-      throw const LocalAuthException(
-        'An account already exists for this email.',
-      );
+    _validateUsername(normalizedUsername);
+    _validateEmail(normalizedEmail);
+    _validatePassword(password);
+
+    if (_users.containsKey(normalizedUsername)) {
+      throw const LocalAuthException('An account already exists for this username.');
     }
 
     final salt = _createSalt();
-    _users[normalizedEmail] = LocalUser(
+    _users[normalizedUsername] = LocalUser(
+      username: normalizedUsername,
       name: name.trim(),
       email: normalizedEmail,
       passwordSalt: salt,
       passwordHash: _hashPassword(password, salt),
-      avatarColor: LocalUser.avatarColorFor(normalizedEmail),
+      avatarColor: LocalUser.avatarColorFor(normalizedUsername),
     );
-    _currentUserEmail = normalizedEmail;
     await _save();
   }
 
   @override
-  Future<void> login({required String email, required String password}) async {
-    final normalizedEmail = email.trim().toLowerCase();
-    final user = _users[normalizedEmail];
+  Future<void> verifyLoginCredentials({
+    required String username,
+    required String password,
+  }) async {
+    final normalizedUsername = _normalizeUsername(username);
+    final user = _users[normalizedUsername];
     if (user == null ||
         user.passwordHash != _hashPassword(password, user.passwordSalt)) {
-      throw const LocalAuthException('Email or password is incorrect.');
+      throw const LocalAuthException('Username or password is incorrect.');
     }
-
-    _currentUserEmail = normalizedEmail;
-    await _save();
   }
 
-
   @override
-  Future<void> ensureVerifiedUser({
-    required String name,
-    required String email,
-  }) async {
-    final normalizedEmail = email.trim().toLowerCase();
-    final existingUser = _users[normalizedEmail];
-    if (existingUser == null) {
-      final salt = _createSalt();
-      _users[normalizedEmail] = LocalUser(
-        name: name.trim(),
-        email: normalizedEmail,
-        passwordSalt: salt,
-        passwordHash: _hashPassword(_createSalt(), salt),
-        avatarColor: LocalUser.avatarColorFor(normalizedEmail),
-      );
+  Future<void> completeVerifiedSignIn(String username) async {
+    final normalizedUsername = _normalizeUsername(username);
+    if (!_users.containsKey(normalizedUsername)) {
+      throw const LocalAuthException('Username does not exist.');
     }
 
-    _currentUserEmail = normalizedEmail;
+    _currentUsername = normalizedUsername;
     await _save();
   }
 
   @override
-  Future<void> setCurrentUser(String email) async {
-    _currentUserEmail = email.trim().toLowerCase();
+  Future<String> emailForUsername(String username) async {
+    final normalizedUsername = _normalizeUsername(username);
+    if (normalizedUsername.isEmpty) {
+      throw const LocalAuthException('Enter your username.');
+    }
+
+    final email = _users[normalizedUsername]?.email.trim().toLowerCase();
+    if (email == null) {
+      throw const LocalAuthException('Username does not exist.');
+    }
+    if (email.isEmpty) {
+      throw const LocalAuthException('No email is configured for this username.');
+    }
+    _validateEmail(email);
+    return email;
+  }
+
+  @override
+  Future<void> setCurrentUser(String username) async {
+    final normalizedUsername = _normalizeUsername(username);
+    if (!_users.containsKey(normalizedUsername)) {
+      throw const LocalAuthException('Username does not exist.');
+    }
+    _currentUsername = normalizedUsername;
     await _save();
   }
 
   @override
   Future<void> logout() async {
-    _currentUserEmail = null;
+    _currentUsername = null;
     await _save();
   }
 
@@ -168,12 +189,50 @@ class LocalAuthRepository implements AuthRepository {
   Future<void> _save() async {
     final file = _file;
     if (file == null) return;
+    final parent = file.parent;
+    if (!await parent.exists()) {
+      await parent.create(recursive: true);
+    }
+    const encoder = JsonEncoder.withIndent('  ');
+    await file.writeAsString(encoder.convert(_toJson()));
+  }
 
-    final data = {
+  Map<String, dynamic> _toJson() {
+    return {
       'isDarkMode': _isDarkMode,
-      'currentUserEmail': _currentUserEmail,
-      'users': _users.map((email, user) => MapEntry(email, user.toJson())),
+      'currentUsername': _currentUsername,
+      'users': _users.map((username, user) => MapEntry(username, user.toJson())),
     };
-    await file.writeAsString(const JsonEncoder.withIndent('  ').convert(data));
+  }
+
+  String _normalizeUsername(String username) => username.trim().toLowerCase();
+
+  String _usernameForLegacyEmail(String email) {
+    final localPart = email.split('@').first.trim().toLowerCase();
+    final sanitized = localPart.replaceAll(RegExp(r'[^a-z0-9_.-]'), '');
+    return sanitized.isEmpty ? 'user' : sanitized;
+  }
+
+  void _validateUsername(String username) {
+    if (username.isEmpty) {
+      throw const LocalAuthException('Enter your username.');
+    }
+    if (!RegExp(r'^[a-z0-9_.-]{3,32}$').hasMatch(username)) {
+      throw const LocalAuthException(
+        'Usernames must be 3-32 characters using letters, numbers, dots, underscores, or hyphens.',
+      );
+    }
+  }
+
+  void _validateEmail(String email) {
+    if (email.isEmpty || !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      throw const LocalAuthException('A valid email is required for this username.');
+    }
+  }
+
+  void _validatePassword(String password) {
+    if (password.length < 8) {
+      throw const LocalAuthException('Password must be at least 8 characters.');
+    }
   }
 }

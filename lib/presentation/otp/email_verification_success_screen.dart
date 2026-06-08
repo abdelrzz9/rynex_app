@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 
 class EmailVerificationSuccessScreen extends StatelessWidget {
   const EmailVerificationSuccessScreen({
-    required this.email,
+    required this.username,
     required this.isDarkMode,
     required this.onDarkModeChanged,
     required this.onStartOver,
     super.key,
   });
 
-  final String email;
+  final String username;
   final bool isDarkMode;
   final ValueChanged<bool> onDarkModeChanged;
   final VoidCallback onStartOver;
@@ -53,7 +53,7 @@ class EmailVerificationSuccessScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        'Email verified',
+                        'Account verified',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w800,
@@ -61,7 +61,7 @@ class EmailVerificationSuccessScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        email,
+                        username,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.titleMedium,
                       ),
@@ -69,7 +69,7 @@ class EmailVerificationSuccessScreen extends StatelessWidget {
                       OutlinedButton.icon(
                         onPressed: onStartOver,
                         icon: const Icon(Icons.replay),
-                        label: const Text('Verify another email'),
+                        label: const Text('Verify another account'),
                       ),
                     ],
                   ),

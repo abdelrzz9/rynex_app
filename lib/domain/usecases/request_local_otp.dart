@@ -6,7 +6,7 @@ class RequestLocalOtp {
 
   final OtpRepository _repository;
 
-  OtpChallenge call(String email) {
-    return _repository.requestOtp(email);
+  Future<OtpChallenge> call(String username) {
+    return _repository.requestOtp(username);
   }
 }

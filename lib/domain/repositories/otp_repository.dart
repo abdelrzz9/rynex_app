@@ -1,11 +1,11 @@
 import '../entities/otp_challenge.dart';
 
-/// Boundary for local, device-only OTP generation and email verification.
+/// Boundary for username-based email OTP generation and verification.
 abstract class OtpRepository {
   OtpChallenge? get currentChallenge;
 
-  OtpChallenge requestOtp(String email);
-  OtpChallenge resendOtp();
+  Future<OtpChallenge> requestOtp(String username);
+  Future<OtpChallenge> resendOtp();
   bool verifyOtp(String code);
   void clear();
 }

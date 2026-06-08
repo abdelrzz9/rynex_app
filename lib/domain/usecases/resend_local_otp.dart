@@ -6,7 +6,7 @@ class ResendLocalOtp {
 
   final OtpRepository _repository;
 
-  OtpChallenge call() {
+  Future<OtpChallenge> call() {
     return _repository.resendOtp();
   }
 }

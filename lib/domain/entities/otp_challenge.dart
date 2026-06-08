@@ -1,12 +1,12 @@
-/// In-memory OTP challenge data used by the local email verification flow.
+/// In-memory OTP challenge metadata for a username-based email verification flow.
 class OtpChallenge {
   const OtpChallenge({
-    required this.email,
+    required this.username,
     required this.code,
     required this.createdAt,
   });
 
-  final String email;
+  final String username;
   final String code;
   final DateTime createdAt;
 }

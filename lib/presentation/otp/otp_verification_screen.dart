@@ -22,10 +22,12 @@ class OtpVerificationScreen extends StatefulWidget {
 }
 
 class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
+  final _codeController = TextEditingController();
   late OtpChallenge _challenge;
   late final ResendLocalOtp _resendLocalOtp;
   late final VerifyLocalOtp _verifyLocalOtp;
   bool _isVerifying = false;
+  bool _isResending = false;
 
   @override
   void initState() {
@@ -35,15 +37,20 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     _verifyLocalOtp = VerifyLocalOtp(widget.otpRepository);
   }
 
+  @override
+  void dispose() {
+    _codeController.dispose();
+    super.dispose();
+  }
+
   Future<void> _verifyEmail() async {
     if (_isVerifying) return;
     setState(() => _isVerifying = true);
-    await Future<void>.delayed(const Duration(milliseconds: 350));
 
-    if (_verifyLocalOtp(_challenge.code)) {
-      final email = _challenge.email;
+    if (_verifyLocalOtp(_codeController.text)) {
+      final username = _challenge.username;
       widget.otpRepository.clear();
-      widget.onVerified(email);
+      widget.onVerified(username);
       if (mounted) Navigator.of(context).pop();
       return;
     }
@@ -51,15 +58,31 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     if (!mounted) return;
     setState(() => _isVerifying = false);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Verification expired. Send a new email.')),
+      const SnackBar(content: Text('Invalid verification code.')),
     );
   }
 
-  void _resendEmail() {
-    setState(() => _challenge = _resendLocalOtp());
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('A new local email check is ready.')),
-    );
+  Future<void> _resendEmail() async {
+    if (_isResending) return;
+    setState(() => _isResending = true);
+    try {
+      final challenge = await _resendLocalOtp();
+      if (!mounted) return;
+      setState(() {
+        _challenge = challenge;
+        _codeController.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('A new verification code was sent.')),
+      );
+    } on OtpException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } finally {
+      if (mounted) setState(() => _isResending = false);
+    }
   }
 
   @override
@@ -93,7 +116,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        'Email ready for ${_challenge.email}',
+                        'Enter verification code',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w800,
@@ -101,34 +124,49 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'For this local demo, no verification digits are printed '
-                        'or typed on screen. Tap the verification action to '
-                        'continue as the owner account.',
+                        'We sent a six-digit code to the email stored for your username.',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 24),
+                      TextField(
+                        controller: _codeController,
+                        keyboardType: TextInputType.number,
+                        maxLength: 6,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _verifyEmail(),
+                        decoration: const InputDecoration(
+                          labelText: 'Verification code',
+                          prefixIcon: Icon(Icons.pin_outlined),
+                          border: OutlineInputBorder(),
+                          counterText: '',
+                        ),
+                      ),
+                      const SizedBox(height: 20),
                       FilledButton.icon(
                         onPressed: _isVerifying ? null : _verifyEmail,
                         icon: _isVerifying
                             ? const SizedBox.square(
                                 dimension: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
+                                child: CircularProgressIndicator(strokeWidth: 2),
                               )
                             : const Icon(Icons.verified_user_outlined),
                         label: Text(
-                          _isVerifying ? 'Verifying...' : 'Verify email',
+                          _isVerifying ? 'Verifying...' : 'Verify code',
                         ),
                       ),
                       const SizedBox(height: 12),
                       TextButton.icon(
-                        onPressed: _isVerifying ? null : _resendEmail,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Send again'),
+                        onPressed: (_isVerifying || _isResending) ? null : _resendEmail,
+                        icon: _isResending
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.refresh),
+                        label: Text(_isResending ? 'Sending...' : 'Send again'),
                       ),
                     ],
                   ),

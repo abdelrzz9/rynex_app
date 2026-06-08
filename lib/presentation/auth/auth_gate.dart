@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../core/config/app_identity.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/repositories/otp_repository.dart';
 import '../home/home_screen.dart';
@@ -25,53 +24,50 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
-  late String? _signedInEmail;
-  String? _verifiedEmail;
+  late String? _signedInUsername;
+  String? _verifiedUsername;
 
   @override
   void initState() {
     super.initState();
-    _signedInEmail = widget.authStore.currentUserEmail;
+    _signedInUsername = widget.authStore.currentUsername;
   }
 
-  Future<void> _onEmailVerified(String email) async {
-    await widget.authStore.ensureVerifiedUser(
-      name: AppIdentity.ownerName,
-      email: email,
-    );
+  Future<void> _onUsernameVerified(String username) async {
+    await widget.authStore.completeVerifiedSignIn(username);
     if (!mounted) return;
     setState(() {
-      _verifiedEmail = email;
-      _signedInEmail = widget.authStore.currentUserEmail;
+      _verifiedUsername = username;
+      _signedInUsername = widget.authStore.currentUsername;
     });
   }
 
-  Future<void> _onSwitchAccount(String email) async {
-    await widget.authStore.setCurrentUser(email);
-    setState(() => _signedInEmail = email);
+  Future<void> _onSwitchAccount(String username) async {
+    await widget.authStore.setCurrentUser(username);
+    setState(() => _signedInUsername = username);
   }
 
   Future<void> _logout() async {
     await widget.authStore.logout();
     setState(() {
-      _signedInEmail = null;
-      _verifiedEmail = null;
+      _signedInUsername = null;
+      _verifiedUsername = null;
     });
   }
 
   void _restartOtpFlow() {
     widget.otpRepository.clear();
-    setState(() => _verifiedEmail = null);
+    setState(() => _verifiedUsername = null);
   }
 
   @override
   Widget build(BuildContext context) {
-    final signedInEmail = _signedInEmail;
-    if (signedInEmail == null) {
-      final verifiedEmail = _verifiedEmail;
-      if (verifiedEmail != null) {
+    final signedInUsername = _signedInUsername;
+    if (signedInUsername == null) {
+      final verifiedUsername = _verifiedUsername;
+      if (verifiedUsername != null) {
         return EmailVerificationSuccessScreen(
-          email: verifiedEmail,
+          username: verifiedUsername,
           isDarkMode: widget.isDarkMode,
           onDarkModeChanged: widget.onDarkModeChanged,
           onStartOver: _restartOtpFlow,
@@ -79,20 +75,22 @@ class _AuthGateState extends State<AuthGate> {
       }
 
       return EmailVerificationRequestScreen(
+        authStore: widget.authStore,
         otpRepository: widget.otpRepository,
         isDarkMode: widget.isDarkMode,
         onDarkModeChanged: widget.onDarkModeChanged,
-        onVerified: _onEmailVerified,
+        onVerified: _onUsernameVerified,
       );
     }
 
     final currentUser = widget.authStore.currentUser;
     if (currentUser == null) {
       return EmailVerificationRequestScreen(
+        authStore: widget.authStore,
         otpRepository: widget.otpRepository,
         isDarkMode: widget.isDarkMode,
         onDarkModeChanged: widget.onDarkModeChanged,
-        onVerified: _onEmailVerified,
+        onVerified: _onUsernameVerified,
       );
     }
 

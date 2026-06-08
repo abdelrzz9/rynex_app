@@ -1,18 +1,32 @@
 # Rynex App
 
-A Flutter drawing app with a device-local OTP verification entry flow.
+A Flutter drawing app with username-based email OTP verification.
 
-## Local OTP verification flow
+## Secure OTP verification flow
 
-The app starts with a phone number verification experience when no local drawing account is signed in:
+1. A user logs in with a username and password, or registers with a username, password, display name, and account email.
+2. Account emails are stored in the local auth database and are not rendered back in account switchers, titles, success states, or OTP hints.
+3. When an OTP is requested, the OTP repository looks up the stored email by username through `AuthRepository.emailForUsername`.
+4. The OTP is sent only to the email returned by that database lookup.
+5. SMTP credentials and sender address come from environment variables; there are no hardcoded recipient or sender addresses in the app code.
+6. OTP values are held only in memory by `InMemoryOtpRepository` and are cleared after successful verification.
 
-1. Enter a phone number on the verification screen.
-2. The app generates a random six-digit OTP locally on the device.
-3. The OTP is kept only in memory through `InMemoryOtpRepository`; it is not written to a database, file, or backend service.
-4. The app navigates to a six-field OTP entry screen.
-5. In debug builds only, the generated OTP is displayed on the verification screen for testing.
-6. Entering the matching OTP shows a success state; entering a wrong OTP shows an error message.
-7. The resend button stays disabled during the countdown, then generates a fresh in-memory OTP when tapped.
+## SMTP environment variables
+
+Set these before running a build that needs to send OTP email:
+
+```sh
+export SMTP_HOST="your-smtp-host"
+export SMTP_PORT="587"
+export SMTP_USERNAME="smtp-user"
+export SMTP_PASSWORD="smtp-password"
+export SMTP_SENDER_EMAIL="your-sender-address"
+export SMTP_SENDER_NAME="Rynex"
+export SMTP_USE_STARTTLS="true"
+export SMTP_USE_SSL="false"
+```
+
+Use `SMTP_USE_SSL=true` for implicit TLS providers, commonly on port `465`. Use `SMTP_USE_STARTTLS=true` for STARTTLS providers, commonly on port `587`.
 
 ## Running locally
 
@@ -38,15 +52,3 @@ flutter run
 ```
 
 If the emulator still appears as `offline`, wipe the emulator data or select a different emulator/device before retrying.
-
-## Getting Started
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.

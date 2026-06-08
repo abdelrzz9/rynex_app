@@ -32,7 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
   Future<void> _showAccountSwitcher() async {
-    final selectedEmail = await showModalBottomSheet<String>(
+    final selectedUsername = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
       builder: (context) {
@@ -51,18 +51,18 @@ class _HomeScreenState extends State<HomeScreen> {
               for (final user in widget.users)
                 ListTile(
                   leading: AccountAvatar(user: user),
-                  title: Text(user.name.isEmpty ? user.email : user.name),
-                  subtitle: Text(user.email),
-                  trailing: user.email == widget.currentUser.email
+                  title: Text(user.displayName),
+                  subtitle: Text(user.username),
+                  trailing: user.username == widget.currentUser.username
                       ? const Icon(Icons.check_circle)
                       : null,
-                  onTap: () => Navigator.of(context).pop(user.email),
+                  onTap: () => Navigator.of(context).pop(user.username),
                 ),
               const Divider(),
               ListTile(
                 leading: const CircleAvatar(child: Icon(Icons.logout)),
                 title: const Text('Log out'),
-                subtitle: const Text('Return to email verification.'),
+                subtitle: const Text('Return to account verification.'),
                 onTap: () {
                   Navigator.of(context).pop();
                   widget.onLogout();
@@ -74,10 +74,11 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
 
-    if (selectedEmail == null || selectedEmail == widget.currentUser.email) {
+    if (selectedUsername == null ||
+        selectedUsername == widget.currentUser.username) {
       return;
     }
-    widget.onSwitchAccount(selectedEmail);
+    widget.onSwitchAccount(selectedUsername);
   }
 
   @override
@@ -87,7 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          isDrawing ? 'Drawing • ${widget.currentUser.email}' : 'Notes',
+          isDrawing ? 'Drawing • ${widget.currentUser.displayName}' : 'Notes',
         ),
         actions: [
           IconButton(
