@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'drawing_element.dart';
+import 'color_serialization.dart';
 
 // ---------------------------------------------------------------------------
 // RectElement — Axis-aligned rectangle shape.
@@ -100,21 +101,21 @@ class RectElement extends DrawingElement {
   Map<String, dynamic> toJson() => {
     'id': id,
     'type': 'rect',
-    'color': color.value,
+    'color': colorToJson(color),
     'strokeWidth': strokeWidth,
     'positionX': position.dx,
     'positionY': position.dy,
     'zIndex': zIndex,
     'width': width,
     'height': height,
-    'fillColor': fillColor?.value,
+    'fillColor': fillColor == null ? null : colorToJson(fillColor!),
     'cornerRadius': cornerRadius,
   };
 
   factory RectElement.fromJson(Map<String, dynamic> json) {
     return RectElement(
       id: json['id'] as String,
-      color: Color(json['color'] as int),
+      color: colorFromJson(json['color'] as int),
       strokeWidth: (json['strokeWidth'] as num).toDouble(),
       position: Offset(
         (json['positionX'] as num).toDouble(),
@@ -124,7 +125,7 @@ class RectElement extends DrawingElement {
       width: (json['width'] as num).toDouble(),
       height: (json['height'] as num).toDouble(),
       fillColor: json['fillColor'] != null
-          ? Color(json['fillColor'] as int)
+          ? colorFromJson(json['fillColor'] as int)
           : null,
       cornerRadius: (json['cornerRadius'] as num?)?.toDouble() ?? 0,
     );
