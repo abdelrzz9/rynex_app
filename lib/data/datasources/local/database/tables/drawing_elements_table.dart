@@ -5,6 +5,8 @@ class DrawingElementsTable extends Table {
   String get tableName => 'drawing_elements';
 
   // ---- Shared columns (all types) ----------------------------------------
+  IntColumn get accountNumber =>
+      integer().withDefault(const Constant(1)).named('account_number')();
   TextColumn get id => text().withLength(min: 1, max: 64)();
   TextColumn get type => text().withLength(min: 1, max: 16)();
   IntColumn get color => integer()();
@@ -31,5 +33,5 @@ class DrawingElementsTable extends Table {
   RealColumn get strokeMaxY => real().nullable().named('stroke_max_y')();
 
   @override
-  Set<Column> get primaryKey => {id};
+  Set<Column> get primaryKey => {accountNumber, id};
 }

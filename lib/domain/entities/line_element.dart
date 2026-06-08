@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'drawing_element.dart';
+import 'color_serialization.dart';
 
 // ---------------------------------------------------------------------------
 // LineElement — A straight line between two points.
@@ -107,7 +108,7 @@ class LineElement extends DrawingElement {
   Map<String, dynamic> toJson() => {
     'id': id,
     'type': 'line',
-    'color': color.value,
+    'color': colorToJson(color),
     'strokeWidth': strokeWidth,
     'positionX': position.dx,
     'positionY': position.dy,
@@ -121,7 +122,7 @@ class LineElement extends DrawingElement {
   factory LineElement.fromJson(Map<String, dynamic> json) {
     return LineElement(
       id: json['id'] as String,
-      color: Color(json['color'] as int),
+      color: colorFromJson(json['color'] as int),
       strokeWidth: (json['strokeWidth'] as num).toDouble(),
       position: Offset(
         (json['positionX'] as num).toDouble(),

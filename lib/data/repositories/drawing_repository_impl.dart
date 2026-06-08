@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart';
+import '../../domain/entities/drawing_account_summary.dart';
 import '../../domain/entities/drawing_element.dart';
 import '../../domain/repositories/drawing_repository.dart';
 import '../datasources/local/dao/drawing_element_dao.dart';
@@ -8,6 +8,19 @@ class DrawingRepositoryImpl implements DrawingRepository {
   final DrawingElementDao _dao;
 
   const DrawingRepositoryImpl(this._dao);
+
+  @override
+  int get activeAccountNumber => _dao.activeAccountNumber;
+
+  @override
+  Future<void> useAccount(int accountNumber) {
+    return _dao.useAccount(accountNumber);
+  }
+
+  @override
+  Future<List<DrawingAccountSummary>> loadAccountSummaries() {
+    return _dao.loadAccountSummaries();
+  }
 
   @override
   Future<List<DrawingElement>> loadAll() async {
@@ -38,7 +51,9 @@ class DrawingRepositoryImpl implements DrawingRepository {
 
   @override
   Future<void> update(DrawingElement element) async {
-    final success = await _dao.updateElement(DrawingElementMapper.toCompanion(element));
+    final success = await _dao.updateElement(
+      DrawingElementMapper.toCompanion(element),
+    );
     if (!success) {
       throw ElementNotFoundException(element.id);
     }
@@ -70,7 +85,8 @@ class DrawingRepositoryImpl implements DrawingRepository {
 
   @override
   Stream<List<DrawingElement>> watchAll() {
-    return _dao.watchAll().map((rows) =>
-        rows.map(DrawingElementMapper.toEntity).toList());
+    return _dao.watchAll().map(
+      (rows) => rows.map(DrawingElementMapper.toEntity).toList(),
+    );
   }
 }

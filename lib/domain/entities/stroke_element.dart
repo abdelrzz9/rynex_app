@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'drawing_element.dart';
+import 'color_serialization.dart';
 
 // ---------------------------------------------------------------------------
 // StrokeElement — Represents a freehand pen/pencil stroke.
@@ -136,7 +137,7 @@ class StrokeElement extends DrawingElement {
   Map<String, dynamic> toJson() => {
     'id': id,
     'type': 'stroke',
-    'color': color.value,
+    'color': colorToJson(color),
     'strokeWidth': strokeWidth,
     'positionX': position.dx,
     'positionY': position.dy,
@@ -156,7 +157,7 @@ class StrokeElement extends DrawingElement {
 
     return StrokeElement(
       id: json['id'] as String,
-      color: Color(json['color'] as int),
+      color: colorFromJson(json['color'] as int),
       strokeWidth: (json['strokeWidth'] as num).toDouble(),
       position: Offset(
         (json['positionX'] as num).toDouble(),
