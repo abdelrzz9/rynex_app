@@ -3,7 +3,7 @@ import 'dart:math';
 import '../../domain/entities/otp_challenge.dart';
 import '../../domain/repositories/otp_repository.dart';
 
-/// Stores OTP challenges only in this process' memory.
+/// Stores local email OTP challenges only in this process' memory.
 class InMemoryOtpRepository implements OtpRepository {
   final Random _random = Random.secure();
   OtpChallenge? _currentChallenge;
@@ -12,14 +12,14 @@ class InMemoryOtpRepository implements OtpRepository {
   OtpChallenge? get currentChallenge => _currentChallenge;
 
   @override
-  OtpChallenge requestOtp(String phoneNumber) {
-    final normalizedPhone = phoneNumber.trim();
-    if (normalizedPhone.isEmpty) {
-      throw const OtpException('Enter a valid phone number.');
+  OtpChallenge requestOtp(String email) {
+    final normalizedEmail = email.trim().toLowerCase();
+    if (normalizedEmail.isEmpty || !normalizedEmail.contains('@')) {
+      throw const OtpException('Enter a valid email address.');
     }
 
     return _currentChallenge = OtpChallenge(
-      phoneNumber: normalizedPhone,
+      email: normalizedEmail,
       code: _generateCode(),
       createdAt: DateTime.now(),
     );
@@ -32,7 +32,7 @@ class InMemoryOtpRepository implements OtpRepository {
       throw const OtpException('Request an OTP before resending.');
     }
 
-    return requestOtp(challenge.phoneNumber);
+    return requestOtp(challenge.email);
   }
 
   @override
