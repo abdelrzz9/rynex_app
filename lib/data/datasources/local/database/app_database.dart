@@ -5,6 +5,8 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart';
 
+import '../../../../domain/entities/drawing_account_summary.dart';
+
 /// Local SQLite database used by the drawing data layer.
 ///
 /// This app is intentionally offline-first: all drawing elements are persisted
@@ -19,15 +21,60 @@ class AppDatabase {
   static AppDatabase get instance => _instance ??= AppDatabase();
 
   final Future<Database> _database;
+  int _activeAccountNumber = 1;
+
   final StreamController<List<DrawingElementsTableData>> _changes =
       StreamController<List<DrawingElementsTableData>>.broadcast();
 
-  Future<List<DrawingElementsTableData>> loadElements() async {
+  int get activeAccountNumber => _activeAccountNumber;
+
+  Future<void> useAccount(int accountNumber) async {
+    if (accountNumber < 1) {
+      throw ArgumentError.value(
+        accountNumber,
+        'accountNumber',
+        'Account number must be positive.',
+      );
+    }
+    if (_activeAccountNumber == accountNumber) return;
+
+    _activeAccountNumber = accountNumber;
+    await _emitChanges();
+  }
+
+  Future<List<DrawingElementsTableData>> loadElements({
+    int? accountNumber,
+  }) async {
     final db = await _readyDatabase();
     final result = db.select(
-      'SELECT * FROM drawing_elements ORDER BY z_index ASC;',
+      'SELECT * FROM drawing_elements '
+      'WHERE account_number = ? '
+      'ORDER BY z_index ASC;',
+      [accountNumber ?? _activeAccountNumber],
     );
     return result.map(_rowToElement).toList(growable: false);
+  }
+
+  Future<List<DrawingAccountSummary>> loadAccountSummaries() async {
+    final db = await _readyDatabase();
+    final result = db.select(
+      'SELECT account_number, color, COUNT(*) AS element_count '
+      'FROM drawing_elements '
+      'GROUP BY account_number, color '
+      'ORDER BY account_number ASC;',
+    );
+
+    final summaries = <int, DrawingAccountSummary>{};
+    for (final row in result) {
+      final accountNumber = row['account_number'] as int;
+      final color = row['color'] as int;
+      final elementCount = row['element_count'] as int;
+      final current = summaries[accountNumber] ??
+          DrawingAccountSummary(accountNumber: accountNumber);
+      summaries[accountNumber] = current.addColorCount(color, elementCount);
+    }
+
+    return summaries.values.toList(growable: false);
   }
 
   Stream<List<DrawingElementsTableData>> watchElements() async* {
@@ -35,20 +82,27 @@ class AppDatabase {
     yield* _changes.stream;
   }
 
-  Future<bool> containsElement(String id) async {
+  Future<bool> containsElement(String id, {int? accountNumber}) async {
     final db = await _readyDatabase();
     final result = db.select(
-      'SELECT 1 FROM drawing_elements WHERE id = ? LIMIT 1;',
-      [id],
+      'SELECT 1 FROM drawing_elements '
+      'WHERE account_number = ? AND id = ? '
+      'LIMIT 1;',
+      [accountNumber ?? _activeAccountNumber, id],
     );
     return result.isNotEmpty;
   }
 
-  Future<DrawingElementsTableData?> elementById(String id) async {
+  Future<DrawingElementsTableData?> elementById(
+    String id, {
+    int? accountNumber,
+  }) async {
     final db = await _readyDatabase();
     final result = db.select(
-      'SELECT * FROM drawing_elements WHERE id = ? LIMIT 1;',
-      [id],
+      'SELECT * FROM drawing_elements '
+      'WHERE account_number = ? AND id = ? '
+      'LIMIT 1;',
+      [accountNumber ?? _activeAccountNumber, id],
     );
     if (result.isEmpty) return null;
     return _rowToElement(result.first);
@@ -56,9 +110,10 @@ class AppDatabase {
 
   Future<void> insertElement(DrawingElementsTableData element) async {
     final db = await _readyDatabase();
+    final scopedElement = element.copyWith(accountNumber: _activeAccountNumber);
     final statement = db.prepare(_insertSql);
     try {
-      statement.execute(_elementParameters(element));
+      statement.execute(_elementParameters(scopedElement));
     } finally {
       statement.dispose();
     }
@@ -67,9 +122,10 @@ class AppDatabase {
 
   Future<void> upsertElement(DrawingElementsTableData element) async {
     final db = await _readyDatabase();
+    final scopedElement = element.copyWith(accountNumber: _activeAccountNumber);
     final statement = db.prepare('$_insertSql $_upsertConflictSql');
     try {
-      statement.execute(_elementParameters(element));
+      statement.execute(_elementParameters(scopedElement));
     } finally {
       statement.dispose();
     }
@@ -78,11 +134,13 @@ class AppDatabase {
 
   Future<bool> updateElement(DrawingElementsTableData element) async {
     final db = await _readyDatabase();
+    final scopedElement = element.copyWith(accountNumber: _activeAccountNumber);
     final statement = db.prepare(_updateSql);
     try {
       statement.execute([
-        ..._updateParameters(element),
-        element.id,
+        ..._updateParameters(scopedElement),
+        scopedElement.accountNumber,
+        scopedElement.id,
       ]);
     } finally {
       statement.dispose();
@@ -108,7 +166,10 @@ class AppDatabase {
 
   Future<int> deleteElement(String id) async {
     final db = await _readyDatabase();
-    db.execute('DELETE FROM drawing_elements WHERE id = ?;', [id]);
+    db.execute(
+      'DELETE FROM drawing_elements WHERE account_number = ? AND id = ?;',
+      [_activeAccountNumber, id],
+    );
     final deleted = db.updatedRows;
     if (deleted > 0) {
       await _emitChanges();
@@ -118,7 +179,10 @@ class AppDatabase {
 
   Future<int> clearElements() async {
     final db = await _readyDatabase();
-    db.execute('DELETE FROM drawing_elements;');
+    db.execute(
+      'DELETE FROM drawing_elements WHERE account_number = ?;',
+      [_activeAccountNumber],
+    );
     final deleted = db.updatedRows;
     if (deleted > 0) {
       await _emitChanges();
@@ -154,12 +218,57 @@ class AppDatabase {
     db.execute('PRAGMA journal_mode = WAL;');
     db.execute('PRAGMA foreign_keys = ON;');
     db.execute(_createTableSql);
+    _ensureAccountNumberColumn(db);
+    _ensureAccountScopedPrimaryKey(db);
+    db.execute(_createAccountIndexSql);
     db.execute(_createZIndexSql);
     db.execute(_createStrokeBoundsSql);
   }
 
+  static void _ensureAccountNumberColumn(Database db) {
+    final columns = db.select('PRAGMA table_info(drawing_elements);');
+    final hasAccountNumber = columns.any(
+      (column) => column['name'] == 'account_number',
+    );
+    if (!hasAccountNumber) {
+      db.execute(
+        'ALTER TABLE drawing_elements '
+        'ADD COLUMN account_number INTEGER NOT NULL DEFAULT 1;',
+      );
+    }
+  }
+
+  static void _ensureAccountScopedPrimaryKey(Database db) {
+    final columns = db.select('PRAGMA table_info(drawing_elements);');
+    final accountPk = _primaryKeyPosition(columns, 'account_number');
+    final idPk = _primaryKeyPosition(columns, 'id');
+    if (accountPk == 1 && idPk == 2) return;
+
+    db.execute('BEGIN IMMEDIATE;');
+    try {
+      db.execute('ALTER TABLE drawing_elements RENAME TO drawing_elements_old;');
+      db.execute(_createTableSql);
+      db.execute(_copyLegacyRowsSql);
+      db.execute('DROP TABLE drawing_elements_old;');
+      db.execute('COMMIT;');
+    } catch (_) {
+      db.execute('ROLLBACK;');
+      rethrow;
+    }
+  }
+
+  static int _primaryKeyPosition(ResultSet columns, String columnName) {
+    for (final column in columns) {
+      if (column['name'] == columnName) {
+        return column['pk'] as int;
+      }
+    }
+    return 0;
+  }
+
   static DrawingElementsTableData _rowToElement(Row row) {
     return DrawingElementsTableData(
+      accountNumber: row['account_number'] as int,
       id: row['id'] as String,
       type: row['type'] as String,
       color: row['color'] as int,
@@ -190,6 +299,7 @@ class AppDatabase {
 
   static List<Object?> _elementParameters(DrawingElementsTableData element) {
     return [
+      element.accountNumber,
       element.id,
       element.type,
       element.color,
@@ -211,7 +321,7 @@ class AppDatabase {
   }
 
   static List<Object?> _updateParameters(DrawingElementsTableData element) {
-    return _elementParameters(element).sublist(1);
+    return _elementParameters(element).sublist(2);
   }
 }
 
@@ -220,6 +330,7 @@ Database inMemoryExecutor() => sqlite3.openInMemory();
 /// Row model for the drawing_elements table.
 class DrawingElementsTableData {
   const DrawingElementsTableData({
+    this.accountNumber = 1,
     required this.id,
     required this.type,
     required this.color,
@@ -239,6 +350,7 @@ class DrawingElementsTableData {
     this.strokeMaxY,
   });
 
+  final int accountNumber;
   final String id;
   final String type;
   final int color;
@@ -258,6 +370,7 @@ class DrawingElementsTableData {
   final double? strokeMaxY;
 
   DrawingElementsTableData copyWith({
+    int? accountNumber,
     String? id,
     String? type,
     int? color,
@@ -277,6 +390,7 @@ class DrawingElementsTableData {
     Value<double?> strokeMaxY = const Value.absent(),
   }) {
     return DrawingElementsTableData(
+      accountNumber: accountNumber ?? this.accountNumber,
       id: id ?? this.id,
       type: type ?? this.type,
       color: color ?? this.color,
@@ -301,6 +415,7 @@ class DrawingElementsTableData {
 /// Mutable companion-style value object used for inserts and updates.
 class DrawingElementsTableCompanion {
   const DrawingElementsTableCompanion({
+    this.accountNumber = const Value.absent(),
     this.id = const Value.absent(),
     this.type = const Value.absent(),
     this.color = const Value.absent(),
@@ -320,6 +435,7 @@ class DrawingElementsTableCompanion {
     this.strokeMaxY = const Value.absent(),
   });
 
+  final Value<int> accountNumber;
   final Value<String> id;
   final Value<String> type;
   final Value<int> color;
@@ -340,6 +456,7 @@ class DrawingElementsTableCompanion {
 
   DrawingElementsTableData toData() {
     return DrawingElementsTableData(
+      accountNumber: accountNumber.present ? accountNumber.value : 1,
       id: _required(id, 'id'),
       type: _required(type, 'type'),
       color: _required(color, 'color'),
@@ -362,6 +479,9 @@ class DrawingElementsTableCompanion {
 
   DrawingElementsTableData applyTo(DrawingElementsTableData existing) {
     return existing.copyWith(
+      accountNumber: accountNumber.present
+          ? accountNumber.value
+          : existing.accountNumber,
       id: id.present ? id.value : existing.id,
       type: type.present ? type.value : existing.type,
       color: color.present ? color.value : existing.color,
@@ -383,6 +503,7 @@ class DrawingElementsTableCompanion {
   }
 
   DrawingElementsTableCompanion copyWith({
+    Value<int>? accountNumber,
     Value<String>? id,
     Value<String>? type,
     Value<int>? color,
@@ -402,6 +523,7 @@ class DrawingElementsTableCompanion {
     Value<double?>? strokeMaxY,
   }) {
     return DrawingElementsTableCompanion(
+      accountNumber: accountNumber ?? this.accountNumber,
       id: id ?? this.id,
       type: type ?? this.type,
       color: color ?? this.color,
@@ -432,7 +554,8 @@ class DrawingElementsTableCompanion {
 
 const String _createTableSql = '''
 CREATE TABLE IF NOT EXISTS drawing_elements (
-  id TEXT NOT NULL PRIMARY KEY,
+  account_number INTEGER NOT NULL DEFAULT 1,
+  id TEXT NOT NULL,
   type TEXT NOT NULL,
   color INTEGER NOT NULL,
   stroke_width REAL NOT NULL,
@@ -448,23 +571,14 @@ CREATE TABLE IF NOT EXISTS drawing_elements (
   stroke_min_x REAL,
   stroke_min_y REAL,
   stroke_max_x REAL,
-  stroke_max_y REAL
+  stroke_max_y REAL,
+  PRIMARY KEY (account_number, id)
 );
 ''';
 
-const String _createZIndexSql = '''
-CREATE INDEX IF NOT EXISTS idx_elements_zindex
-ON drawing_elements (z_index ASC);
-''';
-
-const String _createStrokeBoundsSql = '''
-CREATE INDEX IF NOT EXISTS idx_stroke_bounds
-ON drawing_elements (stroke_min_x, stroke_max_x, stroke_min_y, stroke_max_y)
-WHERE type = 'stroke';
-''';
-
-const String _insertSql = '''
-INSERT INTO drawing_elements (
+const String _copyLegacyRowsSql = '''
+INSERT OR IGNORE INTO drawing_elements (
+  account_number,
   id,
   type,
   color,
@@ -482,11 +596,77 @@ INSERT INTO drawing_elements (
   stroke_min_y,
   stroke_max_x,
   stroke_max_y
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+)
+SELECT
+  account_number,
+  id,
+  type,
+  color,
+  stroke_width,
+  position_x,
+  position_y,
+  z_index,
+  created_at,
+  geometry_json,
+  rect_width,
+  rect_height,
+  line_end_x,
+  line_end_y,
+  stroke_min_x,
+  stroke_min_y,
+  stroke_max_x,
+  stroke_max_y
+FROM drawing_elements_old;
+''';
+
+
+const String _createAccountIndexSql = '''
+CREATE INDEX IF NOT EXISTS idx_elements_account
+ON drawing_elements (account_number ASC);
+''';
+
+const String _createZIndexSql = '''
+CREATE INDEX IF NOT EXISTS idx_elements_account_zindex
+ON drawing_elements (account_number ASC, z_index ASC);
+''';
+
+const String _createStrokeBoundsSql = '''
+CREATE INDEX IF NOT EXISTS idx_stroke_bounds
+ON drawing_elements (
+  account_number,
+  stroke_min_x,
+  stroke_max_x,
+  stroke_min_y,
+  stroke_max_y
+)
+WHERE type = 'stroke';
+''';
+
+const String _insertSql = '''
+INSERT INTO drawing_elements (
+  account_number,
+  id,
+  type,
+  color,
+  stroke_width,
+  position_x,
+  position_y,
+  z_index,
+  created_at,
+  geometry_json,
+  rect_width,
+  rect_height,
+  line_end_x,
+  line_end_y,
+  stroke_min_x,
+  stroke_min_y,
+  stroke_max_x,
+  stroke_max_y
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ''';
 
 const String _upsertConflictSql = '''
-ON CONFLICT(id) DO UPDATE SET
+ON CONFLICT(account_number, id) DO UPDATE SET
   type = excluded.type,
   color = excluded.color,
   stroke_width = excluded.stroke_width,
@@ -523,5 +703,5 @@ UPDATE drawing_elements SET
   stroke_min_y = ?,
   stroke_max_x = ?,
   stroke_max_y = ?
-WHERE id = ?;
+WHERE account_number = ? AND id = ?;
 ''';

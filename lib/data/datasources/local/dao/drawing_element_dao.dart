@@ -1,11 +1,22 @@
 import 'package:drift/drift.dart';
 
+import '../../../../domain/entities/drawing_account_summary.dart';
 import '../database/app_database.dart';
 
 class DrawingElementDao {
   DrawingElementDao(this.db);
 
   final AppDatabase db;
+
+  int get activeAccountNumber => db.activeAccountNumber;
+
+  Future<void> useAccount(int accountNumber) {
+    return db.useAccount(accountNumber);
+  }
+
+  Future<List<DrawingAccountSummary>> loadAccountSummaries() {
+    return db.loadAccountSummaries();
+  }
 
   Stream<List<DrawingElementsTableData>> watchAll() {
     return db.watchElements();
@@ -57,7 +68,9 @@ class DrawingElementDao {
   Future<void> insertElement(DrawingElementsTableCompanion companion) async {
     final element = companion.toData();
     if (await db.containsElement(element.id)) {
-      throw StateError('Drawing element with id "${element.id}" already exists');
+      throw StateError(
+        'Drawing element with id "${element.id}" already exists',
+      );
     }
     await db.insertElement(element);
   }

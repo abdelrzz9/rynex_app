@@ -1,10 +1,11 @@
+import '../entities/drawing_account_summary.dart';
 import '../entities/drawing_element.dart';
 
 // ---------------------------------------------------------------------------
 // DrawingRepository — Domain-layer contract for persistence.
 //
 // This is a pure Dart abstract class. It has NO dependencies on Flutter,
-// Drift, sqflite, or any infrastructure concern. The Data layer provides
+// SQLite, or any infrastructure concern. The Data layer provides
 // the concrete implementation (DrawingRepositoryImpl).
 //
 // DESIGN NOTE — "Document" vs "Scene":
@@ -13,6 +14,18 @@ import '../entities/drawing_element.dart';
 //   method signature without changing the domain entities.
 // ---------------------------------------------------------------------------
 abstract interface class DrawingRepository {
+  // ---- Accounts -----------------------------------------------------------
+
+  /// Currently selected local account number. All reads and writes are scoped
+  /// to this account.
+  int get activeAccountNumber;
+
+  /// Switch the repository to a local account number.
+  Future<void> useAccount(int accountNumber);
+
+  /// Return all local account numbers with their element and color counts.
+  Future<List<DrawingAccountSummary>> loadAccountSummaries();
+
   // ---- Read ---------------------------------------------------------------
 
   /// Load every persisted [DrawingElement] ordered by [zIndex] ascending.
@@ -57,7 +70,7 @@ abstract interface class DrawingRepository {
   // ---- Streams (optional reactive layer) ----------------------------------
 
   /// Emits the full updated list whenever the scene changes.
-  /// Implementations backed by Drift get this for free via watchAll().
+  /// Implementations backed by local persistence emit after each scene change.
   Stream<List<DrawingElement>> watchAll();
 }
 
