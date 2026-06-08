@@ -114,6 +114,29 @@ class LocalAuthRepository implements AuthRepository {
     await _save();
   }
 
+
+  @override
+  Future<void> ensureVerifiedUser({
+    required String name,
+    required String email,
+  }) async {
+    final normalizedEmail = email.trim().toLowerCase();
+    final existingUser = _users[normalizedEmail];
+    if (existingUser == null) {
+      final salt = _createSalt();
+      _users[normalizedEmail] = LocalUser(
+        name: name.trim(),
+        email: normalizedEmail,
+        passwordSalt: salt,
+        passwordHash: _hashPassword(_createSalt(), salt),
+        avatarColor: LocalUser.avatarColorFor(normalizedEmail),
+      );
+    }
+
+    _currentUserEmail = normalizedEmail;
+    await _save();
+  }
+
   @override
   Future<void> setCurrentUser(String email) async {
     _currentUserEmail = email.trim().toLowerCase();

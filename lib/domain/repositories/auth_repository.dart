@@ -16,6 +16,7 @@ abstract class AuthRepository {
   });
 
   Future<void> login({required String email, required String password});
+  Future<void> ensureVerifiedUser({required String name, required String email});
   Future<void> setCurrentUser(String email);
   Future<void> logout();
   Future<void> setDarkMode(bool value);
