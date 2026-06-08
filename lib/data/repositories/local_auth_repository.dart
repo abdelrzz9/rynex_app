@@ -12,6 +12,9 @@ import '../../domain/repositories/auth_repository.dart';
 /// Device-local implementation of [AuthRepository].
 class LocalAuthRepository implements AuthRepository {
   static const _fileName = 'rynex_local_auth.json';
+  static const _pbkdf2Algorithm = 'pbkdf2-sha256';
+  static const _pbkdf2Iterations = 120000;
+  static const _derivedKeyLength = 32;
 
   final Map<String, LocalUser> _users = {};
   bool _isDarkMode = false;
@@ -32,15 +35,6 @@ class LocalAuthRepository implements AuthRepository {
   }
 
   @override
-  List<LocalUser> get users {
-    final values = _users.values.toList(growable: false);
-    values.sort(
-      (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
-    );
-    return values;
-  }
-
-  @override
   Future<void> load() async {
     final directory = await getApplicationDocumentsDirectory();
     _file = File(path.join(directory.path, _fileName));
@@ -56,7 +50,8 @@ class LocalAuthRepository implements AuthRepository {
 
     final data = jsonDecode(rawData) as Map<String, dynamic>;
     _isDarkMode = data['isDarkMode'] as bool? ?? false;
-    _currentUserEmail = data['currentUserEmail'] as String?;
+    // Always require an explicit local unlock after an app restart.
+    _currentUserEmail = null;
 
     final usersData = data['users'] as Map<String, dynamic>? ?? {};
     _users
@@ -70,10 +65,7 @@ class LocalAuthRepository implements AuthRepository {
         ),
       );
 
-    if (_currentUserEmail != null && !_users.containsKey(_currentUserEmail)) {
-      _currentUserEmail = null;
-      await _save();
-    }
+    await _save();
   }
 
   @override
@@ -85,7 +77,7 @@ class LocalAuthRepository implements AuthRepository {
     final normalizedEmail = email.trim().toLowerCase();
     if (_users.containsKey(normalizedEmail)) {
       throw const LocalAuthException(
-        'An account already exists for this email.',
+        'A local account already exists for this email.',
       );
     }
 
@@ -105,41 +97,11 @@ class LocalAuthRepository implements AuthRepository {
   Future<void> login({required String email, required String password}) async {
     final normalizedEmail = email.trim().toLowerCase();
     final user = _users[normalizedEmail];
-    if (user == null ||
-        user.passwordHash != _hashPassword(password, user.passwordSalt)) {
-      throw const LocalAuthException('Email or password is incorrect.');
+    if (user == null || !_verifyPassword(password, user)) {
+      throw const LocalAuthException('Email or local password is incorrect.');
     }
 
     _currentUserEmail = normalizedEmail;
-    await _save();
-  }
-
-
-  @override
-  Future<void> ensureVerifiedUser({
-    required String name,
-    required String email,
-  }) async {
-    final normalizedEmail = email.trim().toLowerCase();
-    final existingUser = _users[normalizedEmail];
-    if (existingUser == null) {
-      final salt = _createSalt();
-      _users[normalizedEmail] = LocalUser(
-        name: name.trim(),
-        email: normalizedEmail,
-        passwordSalt: salt,
-        passwordHash: _hashPassword(_createSalt(), salt),
-        avatarColor: LocalUser.avatarColorFor(normalizedEmail),
-      );
-    }
-
-    _currentUserEmail = normalizedEmail;
-    await _save();
-  }
-
-  @override
-  Future<void> setCurrentUser(String email) async {
-    _currentUserEmail = email.trim().toLowerCase();
     await _save();
   }
 
@@ -162,7 +124,75 @@ class LocalAuthRepository implements AuthRepository {
   }
 
   String _hashPassword(String password, String salt) {
-    return sha256.convert(utf8.encode('$salt:$password')).toString();
+    final derivedKey = _pbkdf2(
+      passwordBytes: utf8.encode(password),
+      saltBytes: base64Url.decode(salt),
+      iterations: _pbkdf2Iterations,
+      length: _derivedKeyLength,
+    );
+    return [
+      _pbkdf2Algorithm,
+      _pbkdf2Iterations.toString(),
+      base64UrlEncode(derivedKey),
+    ].join(r'$');
+  }
+
+  bool _verifyPassword(String password, LocalUser user) {
+    if (user.passwordHash.startsWith('$_pbkdf2Algorithm\$')) {
+      return _constantTimeEquals(
+        user.passwordHash,
+        _hashPassword(password, user.passwordSalt),
+      );
+    }
+
+    final legacyHash = sha256
+        .convert(utf8.encode('${user.passwordSalt}:$password'))
+        .toString();
+    return _constantTimeEquals(user.passwordHash, legacyHash);
+  }
+
+  bool _constantTimeEquals(String a, String b) {
+    if (a.length != b.length) return false;
+
+    var difference = 0;
+    for (var index = 0; index < a.length; index += 1) {
+      difference |= a.codeUnitAt(index) ^ b.codeUnitAt(index);
+    }
+
+    return difference == 0;
+  }
+
+  List<int> _pbkdf2({
+    required List<int> passwordBytes,
+    required List<int> saltBytes,
+    required int iterations,
+    required int length,
+  }) {
+    final hmac = Hmac(sha256, passwordBytes);
+    final blocks = <int>[];
+    final blockCount = (length / hmac.convert(<int>[]).bytes.length).ceil();
+
+    for (var blockIndex = 1; blockIndex <= blockCount; blockIndex += 1) {
+      var block = hmac.convert([
+        ...saltBytes,
+        (blockIndex >> 24) & 0xff,
+        (blockIndex >> 16) & 0xff,
+        (blockIndex >> 8) & 0xff,
+        blockIndex & 0xff,
+      ]).bytes;
+      final output = List<int>.from(block);
+
+      for (var iteration = 1; iteration < iterations; iteration += 1) {
+        block = hmac.convert(block).bytes;
+        for (var index = 0; index < output.length; index += 1) {
+          output[index] ^= block[index];
+        }
+      }
+
+      blocks.addAll(output);
+    }
+
+    return blocks.take(length).toList(growable: false);
   }
 
   Future<void> _save() async {

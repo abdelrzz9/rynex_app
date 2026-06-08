@@ -1,11 +1,10 @@
 import '../entities/local_user.dart';
 
-/// Authentication and profile storage boundary for local accounts.
+/// Authentication and profile storage boundary for offline local accounts.
 abstract class AuthRepository {
   bool get isDarkMode;
   String? get currentUserEmail;
   LocalUser? get currentUser;
-  List<LocalUser> get users;
 
   Future<void> load();
 
@@ -16,8 +15,6 @@ abstract class AuthRepository {
   });
 
   Future<void> login({required String email, required String password});
-  Future<void> ensureVerifiedUser({required String name, required String email});
-  Future<void> setCurrentUser(String email);
   Future<void> logout();
   Future<void> setDarkMode(bool value);
 }

@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
 
 import 'domain/repositories/auth_repository.dart';
-import 'domain/repositories/otp_repository.dart';
 import 'presentation/auth/auth_gate.dart';
 
 class RynexApp extends StatefulWidget {
   const RynexApp({
     required this.authStore,
-    required this.otpRepository,
     super.key,
   });
 
   final AuthRepository authStore;
-  final OtpRepository otpRepository;
 
   @override
   State<RynexApp> createState() => _RynexAppState();
@@ -51,7 +48,6 @@ class _RynexAppState extends State<RynexApp> {
       ),
       home: AuthGate(
         authStore: widget.authStore,
-        otpRepository: widget.otpRepository,
         isDarkMode: _isDarkMode,
         onDarkModeChanged: _setDarkMode,
       ),
