@@ -52,6 +52,14 @@ class Camera {
     return Camera(zoom: zoom, pan: pan + delta);
   }
 
+  Rect getVisibleWorldRectPadded(Size screenSize, {double padding = 200}) {
+    return getVisibleWorldRect(screenSize).inflate(padding);
+  }
+
+  bool isVisible(Rect worldBounds, Size screenSize) {
+    return getVisibleWorldRectPadded(screenSize).overlaps(worldBounds);
+  }
+
   Camera copyWith({double? zoom, Offset? pan}) {
     return Camera(
       zoom: zoom ?? this.zoom,

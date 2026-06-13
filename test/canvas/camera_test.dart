@@ -139,5 +139,30 @@ void main() {
       expect(world.dx, closeTo(original.dx, 1e-10));
       expect(world.dy, closeTo(original.dy, 1e-10));
     });
+
+    test('getVisibleWorldRectPadded inflates the rect', () {
+      final camera = Camera(zoom: 1.0, pan: Offset.zero);
+      final padded = camera.getVisibleWorldRectPadded(const Size(100, 50));
+      expect(padded.left, -200);
+      expect(padded.top, -200);
+      expect(padded.right, 300);
+      expect(padded.bottom, 250);
+    });
+
+    test('isVisible returns true for overlapping bounds', () {
+      final camera = Camera(zoom: 1.0, pan: Offset.zero);
+      expect(
+        camera.isVisible(const Rect.fromLTWH(10, 10, 20, 20), const Size(100, 100)),
+        true,
+      );
+    });
+
+    test('isVisible returns false for far away bounds', () {
+      final camera = Camera(zoom: 1.0, pan: Offset.zero);
+      expect(
+        camera.isVisible(const Rect.fromLTWH(1000, 1000, 10, 10), const Size(100, 100)),
+        false,
+      );
+    });
   });
 }
