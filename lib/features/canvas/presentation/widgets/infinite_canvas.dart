@@ -4,6 +4,7 @@ import '../../../selection/presentation/providers/selection_provider.dart';
 import '../../../shapes/domain/entities/shape_entity.dart';
 import '../../../shapes/presentation/providers/shape_provider.dart';
 import '../../engine/canvas_engine.dart';
+import '../../engine/dirty_region_tracker.dart';
 import '../../engine/picture_recorder_manager.dart';
 import '../../presentation/providers/canvas_provider.dart';
 
@@ -17,6 +18,7 @@ class InfiniteCanvas extends ConsumerStatefulWidget {
 class _InfiniteCanvasState extends ConsumerState<InfiniteCanvas> {
   List<ShapeEntity> _previousShapes = [];
   final GlobalKey _repaintKey = GlobalKey();
+  final DirtyRegionTracker _dirtyRegionTracker = DirtyRegionTracker();
   bool _disposed = false;
 
   @override
@@ -57,6 +59,7 @@ class _InfiniteCanvasState extends ConsumerState<InfiniteCanvas> {
             showGrid: canvasState.showGrid,
             isDark: isDark,
             pictureCache: pictureCache,
+            dirtyRegionTracker: _dirtyRegionTracker,
           ),
           size: Size.infinite,
         ),
@@ -72,6 +75,9 @@ class _InfiniteCanvasState extends ConsumerState<InfiniteCanvas> {
 
     for (final removedId in oldIds.difference(newIds)) {
       cache.remove(removedId);
+      _dirtyRegionTracker.addShapeRect(
+        _previousShapes.firstWhere((s) => s.id == removedId).rotatedBoundingBox,
+      );
     }
 
     final existingIds = oldIds.intersection(newIds);
@@ -83,9 +89,12 @@ class _InfiniteCanvasState extends ConsumerState<InfiniteCanvas> {
             old.rotation != shape.rotation ||
             old.style != shape.style) {
           cache.markDirty(shape.id);
+          _dirtyRegionTracker.addShapeRect(shape.rotatedBoundingBox);
+          _dirtyRegionTracker.addShapeRect(old.rotatedBoundingBox);
         }
       } else {
         cache.markDirty(shape.id);
+        _dirtyRegionTracker.addShapeRect(shape.rotatedBoundingBox);
       }
     }
 

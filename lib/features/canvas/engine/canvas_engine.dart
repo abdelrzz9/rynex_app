@@ -19,6 +19,7 @@ import '../../shapes/domain/value_objects/fill_style.dart';
 import '../../shapes/domain/value_objects/roughness.dart';
 import '../../shapes/domain/value_objects/stroke_style.dart';
 import '../domain/entities/canvas_transform.dart';
+import 'dirty_region_tracker.dart';
 import 'picture_recorder_manager.dart';
 
 class CanvasEngine extends CustomPainter {
@@ -33,6 +34,7 @@ class CanvasEngine extends CustomPainter {
   final ShapeType? activeShapeType;
 
   final PictureRecorderManager? pictureCache;
+  final DirtyRegionTracker? dirtyRegionTracker;
 
   CanvasEngine({
     required this.shapes,
@@ -45,6 +47,7 @@ class CanvasEngine extends CustomPainter {
     this.activeDrawingStyle,
     this.activeShapeType,
     this.pictureCache,
+    this.dirtyRegionTracker,
   });
 
   @override
@@ -89,6 +92,7 @@ class CanvasEngine extends CustomPainter {
       _paintMarquee(canvas, selection.marqueeRect!);
     }
 
+    dirtyRegionTracker?.clear();
     canvas.restore();
   }
 
@@ -689,6 +693,7 @@ class CanvasEngine extends CustomPainter {
         oldDelegate.activeDrawingEnd != activeDrawingEnd ||
         oldDelegate.activeDrawingStyle != activeDrawingStyle ||
         oldDelegate.activeShapeType != activeShapeType ||
-        oldDelegate.pictureCache != pictureCache;
+        oldDelegate.pictureCache != pictureCache ||
+        oldDelegate.dirtyRegionTracker != dirtyRegionTracker;
   }
 }
