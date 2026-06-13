@@ -246,82 +246,150 @@ class CanvasEngine extends CustomPainter {
 
   void _paintDiamond(Canvas canvas, DiamondShape shape) {
     final rect = shape.boundingBox;
-    final center = rect.center;
-    final path = Path()
-      ..moveTo(center.dx, rect.top)
-      ..lineTo(rect.right, center.dy)
-      ..lineTo(center.dx, rect.bottom)
-      ..lineTo(rect.left, center.dy)
-      ..close();
+    final roughness = shape.style.roughness;
+    final rng = Random(shape.id.hashCode * 7);
+
+    Path diamondPath(Rect r) {
+      final c = r.center;
+      return Path()
+        ..moveTo(c.dx, r.top)
+        ..lineTo(r.right, c.dy)
+        ..lineTo(c.dx, r.bottom)
+        ..lineTo(r.left, c.dy)
+        ..close();
+    }
 
     if (shape.style.fillStyle != FillStyle.none) {
       final fillPaint = Paint()
         ..color = shape.style.fillColor.withValues(alpha: shape.style.opacity)
         ..style = PaintingStyle.fill;
-      canvas.drawPath(path, fillPaint);
+      canvas.drawPath(diamondPath(rect), fillPaint);
+      if (roughness != Roughness.none) {
+        _paintRoughFill(canvas, rect, shape.style);
+      }
     }
 
-    final strokePaint = Paint()
-      ..color = shape.style.strokeColor.withValues(alpha: shape.style.opacity)
-      ..strokeWidth = shape.style.strokeWidth
-      ..style = PaintingStyle.stroke;
-    canvas.drawPath(path, strokePaint);
+    final iterations = roughness.iterations;
+    final jitter = roughness.jitterAmplitude;
+    for (var i = 0; i < max(iterations, 1); i++) {
+      final strokePaint = Paint()
+        ..color = shape.style.strokeColor.withValues(alpha: shape.style.opacity)
+        ..strokeWidth = shape.style.strokeWidth
+        ..style = PaintingStyle.stroke;
+      final jittered = Rect.fromLTWH(
+        rect.left + _jitter(rng, jitter),
+        rect.top + _jitter(rng, jitter),
+        rect.width + _jitter(rng, jitter),
+        rect.height + _jitter(rng, jitter),
+      );
+      canvas.drawPath(diamondPath(jittered), strokePaint);
+    }
   }
 
   void _paintTriangle(Canvas canvas, TriangleShape shape) {
-    final verts = shape.vertices;
-    final path = Path()
-      ..moveTo(verts[0].dx, verts[0].dy)
-      ..lineTo(verts[1].dx, verts[1].dy)
-      ..lineTo(verts[2].dx, verts[2].dy)
-      ..close();
+    final rect = shape.boundingBox;
+    final roughness = shape.style.roughness;
+    final rng = Random(shape.id.hashCode * 11);
+
+    Path trianglePath(Rect r) {
+      final top = Offset(r.center.dx, r.top);
+      final right = Offset(r.right, r.bottom);
+      final left = Offset(r.left, r.bottom);
+      return Path()
+        ..moveTo(top.dx, top.dy)
+        ..lineTo(right.dx, right.dy)
+        ..lineTo(left.dx, left.dy)
+        ..close();
+    }
 
     if (shape.style.fillStyle != FillStyle.none) {
       final fillPaint = Paint()
         ..color = shape.style.fillColor.withValues(alpha: shape.style.opacity)
         ..style = PaintingStyle.fill;
-      canvas.drawPath(path, fillPaint);
+      canvas.drawPath(trianglePath(rect), fillPaint);
+      if (roughness != Roughness.none) {
+        _paintRoughFill(canvas, rect, shape.style);
+      }
     }
 
-    final strokePaint = Paint()
-      ..color = shape.style.strokeColor.withValues(alpha: shape.style.opacity)
-      ..strokeWidth = shape.style.strokeWidth
-      ..style = PaintingStyle.stroke;
-    canvas.drawPath(path, strokePaint);
+    final iterations = roughness.iterations;
+    final jitter = roughness.jitterAmplitude;
+    for (var i = 0; i < max(iterations, 1); i++) {
+      final strokePaint = Paint()
+        ..color = shape.style.strokeColor.withValues(alpha: shape.style.opacity)
+        ..strokeWidth = shape.style.strokeWidth
+        ..style = PaintingStyle.stroke;
+      final jittered = Rect.fromLTWH(
+        rect.left + _jitter(rng, jitter),
+        rect.top + _jitter(rng, jitter),
+        rect.width + _jitter(rng, jitter),
+        rect.height + _jitter(rng, jitter),
+      );
+      canvas.drawPath(trianglePath(jittered), strokePaint);
+    }
   }
 
   void _paintLine(Canvas canvas, LineShape shape) {
-    final strokePaint = Paint()
-      ..color = shape.style.strokeColor.withValues(alpha: shape.style.opacity)
-      ..strokeWidth = shape.style.strokeWidth
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
+    final roughness = shape.style.roughness;
+    final iterations = roughness.iterations;
+    final jitter = roughness.jitterAmplitude;
+    final rng = Random(shape.id.hashCode * 17);
 
-    _applyStrokeStyle(strokePaint, shape.style.strokeStyle);
-    canvas.drawLine(shape.startPoint, shape.endPoint, strokePaint);
+    for (var i = 0; i < max(iterations, 1); i++) {
+      final strokePaint = Paint()
+        ..color = shape.style.strokeColor.withValues(alpha: shape.style.opacity)
+        ..strokeWidth = shape.style.strokeWidth
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round;
+      _applyStrokeStyle(strokePaint, shape.style.strokeStyle);
+      canvas.drawLine(
+        Offset(
+          shape.startPoint.dx + _jitter(rng, jitter),
+          shape.startPoint.dy + _jitter(rng, jitter),
+        ),
+        Offset(
+          shape.endPoint.dx + _jitter(rng, jitter),
+          shape.endPoint.dy + _jitter(rng, jitter),
+        ),
+        strokePaint,
+      );
+    }
   }
 
   void _paintArrow(Canvas canvas, ArrowShape shape) {
-    final strokePaint = Paint()
-      ..color = shape.style.strokeColor.withValues(alpha: shape.style.opacity)
-      ..strokeWidth = shape.style.strokeWidth
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
+    final roughness = shape.style.roughness;
+    final iterations = roughness.iterations;
+    final jitter = roughness.jitterAmplitude;
+    final rng = Random(shape.id.hashCode * 23);
 
-    _applyStrokeStyle(strokePaint, shape.style.strokeStyle);
-    canvas.drawLine(shape.startPoint, shape.endPoint, strokePaint);
+    for (var i = 0; i < max(iterations, 1); i++) {
+      final strokePaint = Paint()
+        ..color = shape.style.strokeColor.withValues(alpha: shape.style.opacity)
+        ..strokeWidth = shape.style.strokeWidth
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round;
+      _applyStrokeStyle(strokePaint, shape.style.strokeStyle);
 
-    final angle = atan2(
-      shape.endPoint.dy - shape.startPoint.dy,
-      shape.endPoint.dx - shape.startPoint.dx,
-    );
-    final arrowSize = 10.0 + shape.style.strokeWidth * 2;
+      final start = Offset(
+        shape.startPoint.dx + _jitter(rng, jitter),
+        shape.startPoint.dy + _jitter(rng, jitter),
+      );
+      final end = Offset(
+        shape.endPoint.dx + _jitter(rng, jitter),
+        shape.endPoint.dy + _jitter(rng, jitter),
+      );
+      canvas.drawLine(start, end, strokePaint);
 
-    if (shape.endArrowhead != ArrowheadStyle.none) {
-      _drawArrowhead(canvas, shape.endPoint, angle, arrowSize, shape.style, shape.endArrowhead);
-    }
-    if (shape.startArrowhead != ArrowheadStyle.none) {
-      _drawArrowhead(canvas, shape.startPoint, angle + pi, arrowSize, shape.style, shape.startArrowhead);
+      if (i == 0) {
+        final angle = atan2(end.dy - start.dy, end.dx - start.dx);
+        final arrowSize = 10.0 + shape.style.strokeWidth * 2;
+        if (shape.endArrowhead != ArrowheadStyle.none) {
+          _drawArrowhead(canvas, end, angle, arrowSize, shape.style, shape.endArrowhead);
+        }
+        if (shape.startArrowhead != ArrowheadStyle.none) {
+          _drawArrowhead(canvas, start, angle + pi, arrowSize, shape.style, shape.startArrowhead);
+        }
+      }
     }
   }
 
@@ -372,27 +440,40 @@ class CanvasEngine extends CustomPainter {
 
   void _paintFreehand(Canvas canvas, FreehandShape shape) {
     if (shape.points.isEmpty) return;
-    final path = Path();
-    path.moveTo(shape.points[0].dx, shape.points[0].dy);
-    for (var i = 1; i < shape.points.length; i++) {
-      path.lineTo(shape.points[i].dx, shape.points[i].dy);
-    }
-    if (shape.isClosed) path.close();
+    final roughness = shape.style.roughness;
+    final iterations = roughness.iterations;
+    final jitter = roughness.jitterAmplitude;
+    final rng = Random(shape.id.hashCode * 29);
 
-    if (shape.style.fillStyle != FillStyle.none && shape.isClosed) {
-      final fillPaint = Paint()
-        ..color = shape.style.fillColor.withValues(alpha: shape.style.opacity)
-        ..style = PaintingStyle.fill;
-      canvas.drawPath(path, fillPaint);
-    }
+    for (var i = 0; i < max(iterations, 1); i++) {
+      final path = Path();
+      path.moveTo(
+        shape.points[0].dx + _jitter(rng, jitter),
+        shape.points[0].dy + _jitter(rng, jitter),
+      );
+      for (var j = 1; j < shape.points.length; j++) {
+        path.lineTo(
+          shape.points[j].dx + _jitter(rng, jitter),
+          shape.points[j].dy + _jitter(rng, jitter),
+        );
+      }
+      if (shape.isClosed) path.close();
 
-    final strokePaint = Paint()
-      ..color = shape.style.strokeColor.withValues(alpha: shape.style.opacity)
-      ..strokeWidth = shape.style.strokeWidth
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    canvas.drawPath(path, strokePaint);
+      if (i == 0 && shape.style.fillStyle != FillStyle.none && shape.isClosed) {
+        final fillPaint = Paint()
+          ..color = shape.style.fillColor.withValues(alpha: shape.style.opacity)
+          ..style = PaintingStyle.fill;
+        canvas.drawPath(path, fillPaint);
+      }
+
+      final strokePaint = Paint()
+        ..color = shape.style.strokeColor.withValues(alpha: shape.style.opacity)
+        ..strokeWidth = shape.style.strokeWidth
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+      canvas.drawPath(path, strokePaint);
+    }
   }
 
   void _paintText(Canvas canvas, TextShape shape) {
