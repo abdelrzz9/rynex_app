@@ -16,7 +16,8 @@ class RectangleShape extends ShapeEntity {
     super.isVisible,
     super.createdAt,
     this.cornerRadius = 0.0,
-  }) : super(type: ShapeType.rectangle);
+    ShapeType? type,
+  }) : super(type: type ?? ShapeType.rectangle);
 
   @override
   bool hitTest(Offset point) {
@@ -104,7 +105,7 @@ class RoundedRectShape extends RectangleShape {
     this.topRightRadius = 0.0,
     this.bottomRightRadius = 0.0,
     this.bottomLeftRadius = 0.0,
-  }) : super(cornerRadius: 0.0);
+  }) : super(cornerRadius: 0.0, type: ShapeType.roundedRect);
 
   @override
   Map<String, dynamic> toJson() => {

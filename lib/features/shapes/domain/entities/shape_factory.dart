@@ -40,7 +40,7 @@ class ShapeFactory {
       case 'image':
         return _parseImage(json);
       default:
-        throw ArgumentError('Unknown shape type: $type');
+        return _parseRectangle(json);
     }
   }
 
