@@ -63,6 +63,7 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
       onScaleUpdate: _onScaleUpdate,
       onScaleEnd: _onScaleEnd,
       onTapUp: _onTapUp,
+      onDoubleTapDown: _onDoubleTapDown,
       behavior: HitTestBehavior.translucent,
       child: widget.child,
     );
@@ -114,10 +115,58 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
     if (tool == DrawingTool.select) {
       _handleTapSelect(details.localPosition);
     } else if (tool == DrawingTool.text) {
-      _handleAddText(details.localPosition);
+      _handleAddText(details.localPosition, withDialog: true);
     } else if (tool == DrawingTool.image) {
       _handleAddImage(details.localPosition);
     }
+  }
+
+  void _onDoubleTapDown(TapDownDetails details) {
+    final tool = ref.read(activeToolProvider);
+    if (tool == DrawingTool.select) {
+      _handleDoubleTapSelect(details.localPosition);
+    }
+  }
+
+  void _handleDoubleTapSelect(Offset screenPoint) {
+    final transform = ref.read(canvasTransformProvider);
+    final worldPoint = transform.screenToWorld(screenPoint);
+    final shapes = ref.read(shapeListProvider);
+    final hitShape = _hitTestTopmost(shapes, worldPoint);
+    if (hitShape is TextShape) {
+      _showTextEditDialog(hitShape);
+    }
+  }
+
+  void _showTextEditDialog(TextShape shape) {
+    final controller = TextEditingController(text: shape.text);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Text'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 5,
+          minLines: 1,
+          decoration: const InputDecoration(labelText: 'Text content'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              final newText = controller.text;
+              if (newText != shape.text) {
+                final updated = shape.copyWith(text: newText);
+                ref.read(historyProvider.notifier).executeModify(shape.id, shape, updated);
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
   }
 
   HandleType? _hitTestHandle(Offset screenPoint) {
@@ -419,15 +468,60 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
     }
   }
 
-  void _handleAddText(Offset screenPoint) {
+  void _handleAddText(Offset screenPoint, {bool withDialog = false}) {
     final transform = ref.read(canvasTransformProvider);
     final worldPoint = transform.screenToWorld(screenPoint);
     final style = ref.read(activeStyleProvider);
     final id = UuidGenerator.generate();
+    const initialText = 'Text';
+
+    if (withDialog) {
+      final controller = TextEditingController(text: initialText);
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Add Text'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            maxLines: 5,
+            minLines: 1,
+            decoration: const InputDecoration(labelText: 'Text content'),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () {
+                final text = controller.text;
+                if (text.trim().isNotEmpty) {
+                  final shape = TextShape(
+                    id: id,
+                    boundingBox: Rect.fromCenter(center: worldPoint, width: 200, height: 40),
+                    text: text,
+                    style: style.copyWith(
+                      strokeColor: style.strokeColor,
+                      fillColor: Colors.transparent,
+                    ),
+                    layer: _activeLayerInfo(),
+                  );
+                  ref.read(historyProvider.notifier).executeAdd(shape);
+                  ref.read(activeToolProvider.notifier).state = DrawingTool.select;
+                  ref.read(selectionProvider.notifier).select(id);
+                }
+                Navigator.pop(ctx);
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     final shape = TextShape(
       id: id,
       boundingBox: Rect.fromCenter(center: worldPoint, width: 200, height: 40),
-      text: 'Text',
+      text: initialText,
       style: style.copyWith(
         strokeColor: style.strokeColor,
         fillColor: Colors.transparent,
