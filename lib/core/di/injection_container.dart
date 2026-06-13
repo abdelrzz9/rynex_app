@@ -1,12 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:isar/isar.dart';
+import '../services/project_storage_service.dart';
+import '../services/settings_storage_service.dart';
 
-final isarProvider = Provider<Isar>((ref) {
-  throw UnimplementedError('Isar must be initialized before use');
+final projectStorageServiceProvider = Provider<ProjectStorageService>((ref) {
+  return ProjectStorageService();
+});
+
+final settingsStorageServiceProvider = Provider<SettingsStorageService>((ref) {
+  return SettingsStorageService();
 });
 
 final themeModeProvider = StateProvider<bool>((ref) => false);
-
-final shapeRepositoryProvider = Provider<dynamic>((ref) {
-  return null;
-});

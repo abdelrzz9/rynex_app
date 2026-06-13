@@ -2,43 +2,67 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/app_settings.dart';
 import '../../../../core/constants/tool_constants.dart';
 import '../../../shapes/domain/entities/shape.dart';
+import '../../../../core/services/settings_storage_service.dart';
+import '../../../../core/di/injection_container.dart';
 
 final settingsProvider = StateNotifierProvider<SettingsNotifier, AppSettings>(
-  (ref) => SettingsNotifier(),
+  (ref) {
+    final storage = ref.read(settingsStorageServiceProvider);
+    return SettingsNotifier(storage);
+  },
 );
 
 class SettingsNotifier extends StateNotifier<AppSettings> {
-  SettingsNotifier() : super(const AppSettings());
+  final SettingsStorageService _storage;
+
+  SettingsNotifier(this._storage) : super(const AppSettings());
+
+  Future<void> loadSettings() async {
+    state = await _storage.load();
+  }
 
   void toggleDarkMode() {
     state = state.copyWith(isDarkMode: !state.isDarkMode);
+    _save();
   }
 
   void setDarkMode(bool value) {
     state = state.copyWith(isDarkMode: value);
+    _save();
   }
 
   void setDefaultTool(DrawingTool tool) {
     state = state.copyWith(defaultTool: tool);
+    _save();
   }
 
   void setDefaultStyle(ShapeStyle style) {
     state = state.copyWith(defaultStyle: style);
+    _save();
   }
 
   void setLastOpenedProject(String projectId) {
     state = state.copyWith(lastOpenedProjectId: projectId);
+    _save();
   }
 
   void toggleGrid() {
     state = state.copyWith(showGrid: !state.showGrid);
+    _save();
   }
 
   void toggleSnap() {
     state = state.copyWith(snapToGrid: !state.snapToGrid);
+    _save();
   }
 
   void load(AppSettings settings) {
     state = settings;
+  }
+
+  Future<void> _save() async {
+    try {
+      await _storage.save(state);
+    } catch (_) {}
   }
 }

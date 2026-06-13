@@ -1,14 +1,22 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/project_summary.dart';
+import '../../../../core/services/project_storage_service.dart';
+import '../../../../core/di/injection_container.dart';
 
 final projectListProvider = StateNotifierProvider<ProjectListNotifier, List<ProjectSummary>>(
-  (ref) => ProjectListNotifier(),
+  (ref) {
+    final storage = ref.read(projectStorageServiceProvider);
+    return ProjectListNotifier(storage);
+  },
 );
 
 class ProjectListNotifier extends StateNotifier<List<ProjectSummary>> {
-  ProjectListNotifier() : super([]);
+  final ProjectStorageService _storage;
 
-  void load(List<ProjectSummary> projects) {
+  ProjectListNotifier(this._storage) : super([]);
+
+  Future<void> loadProjects() async {
+    final projects = await _storage.listProjects();
     state = projects;
   }
 
