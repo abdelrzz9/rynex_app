@@ -6,14 +6,32 @@ import '../widgets/canvas_gesture_handler.dart';
 import '../../../shapes/presentation/widgets/drawing_toolbar.dart';
 import '../../../shapes/presentation/widgets/properties_panel.dart';
 import '../../../shapes/presentation/providers/active_tool_provider.dart';
+import '../../../shapes/presentation/providers/shape_provider.dart';
 import '../../../layers/presentation/widgets/layer_panel.dart';
+import '../../../projects/presentation/providers/active_project_provider.dart';
 import '../../../../core/constants/tool_constants.dart';
 
-class CanvasEditorPage extends ConsumerWidget {
+class CanvasEditorPage extends ConsumerStatefulWidget {
   const CanvasEditorPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CanvasEditorPage> createState() => _CanvasEditorPageState();
+}
+
+class _CanvasEditorPageState extends ConsumerState<CanvasEditorPage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final project = ref.read(activeProjectProvider);
+      if (project != null && project.shapes.isNotEmpty) {
+        ref.read(shapeListProvider.notifier).loadShapes(project.shapes);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
 

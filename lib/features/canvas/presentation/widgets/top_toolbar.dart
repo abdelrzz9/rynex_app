@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:go_router/go_router.dart';
 import '../providers/canvas_provider.dart';
 import '../../../history/presentation/providers/history_provider.dart';
 import '../../../shapes/presentation/providers/shape_provider.dart';
@@ -32,6 +32,14 @@ class TopToolbar extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Row(
         children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back, size: 20),
+            tooltip: 'Back to Home',
+            onPressed: () => context.goNamed('home'),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          ),
+          const SizedBox(width: 4),
           const Text('Rynex Draw', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(width: 16),
           const Spacer(),
