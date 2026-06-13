@@ -325,11 +325,11 @@ class CanvasEngine extends CustomPainter {
     }
   }
 
-  void _drawArrowhead(Canvas canvas, Offset tip, double angle, double size, ShapeStyle style, ArrowheadStyle arrowhead) {
-    final paint = Paint()
+  void _drawArrowhead(Canvas canvas, Offset tip, double angle, double size, ShapeStyle style, ArrowheadStyle arrowhead, [Paint? paintOverride]) {
+    final paint = paintOverride ?? (Paint()
       ..color = style.strokeColor.withValues(alpha: style.opacity)
       ..strokeWidth = style.strokeWidth
-      ..style = PaintingStyle.fill;
+      ..style = PaintingStyle.fill);
 
     final path = Path();
     const spreadAngle = pi / 6;
@@ -512,6 +512,16 @@ class CanvasEngine extends CustomPainter {
         canvas.drawLine(activeDrawingStart!, activeDrawingEnd!, previewPaint);
       case ShapeType.arrow:
         canvas.drawLine(activeDrawingStart!, activeDrawingEnd!, previewPaint);
+        final angle = atan2(
+          activeDrawingEnd!.dy - activeDrawingStart!.dy,
+          activeDrawingEnd!.dx - activeDrawingStart!.dx,
+        );
+        final arrowSize = 10.0 + activeDrawingStyle!.strokeWidth * 2;
+        final arrowPreviewPaint = Paint()
+          ..color = activeDrawingStyle!.strokeColor.withValues(alpha: 0.5)
+          ..style = PaintingStyle.fill;
+        _drawArrowhead(canvas, activeDrawingEnd!, angle, arrowSize, activeDrawingStyle!, ArrowheadStyle.triangle, arrowPreviewPaint);
+        _drawArrowhead(canvas, activeDrawingStart!, angle + pi, arrowSize, activeDrawingStyle!, ArrowheadStyle.none);
       default:
         canvas.drawRect(rect, previewPaint);
     }

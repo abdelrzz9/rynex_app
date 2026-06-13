@@ -12,7 +12,6 @@ linter:
     - avoid_print
     - avoid_redundant_argument_values
     - avoid_relative_lib_imports
-    - avoid_returning_null
     - avoid_shadowing_type_parameters
     - avoid_single_cascade_in_expression_statements
     - avoid_types_as_parameter_names
