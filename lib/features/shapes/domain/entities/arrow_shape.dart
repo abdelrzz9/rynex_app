@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../../../../core/utils/geometry_utils.dart';
 import 'shape_entity.dart';
 import 'shape_type.dart';
 import 'shape.dart';
@@ -32,20 +33,9 @@ class ArrowShape extends ShapeEntity {
   double get length => (endPoint - startPoint).distance;
   double get angle => atan2(endPoint.dy - startPoint.dy, endPoint.dx - startPoint.dx);
 
-  double _perpendicularDistance(Offset point, Offset lineStart, Offset lineEnd) {
-    final dx = lineEnd.dx - lineStart.dx;
-    final dy = lineEnd.dy - lineStart.dy;
-    final mag = sqrt(dx * dx + dy * dy);
-    if (mag < 1e-10) return (point - lineStart).distance;
-    final u = ((point.dx - lineStart.dx) * dx + (point.dy - lineStart.dy) * dy) / (mag * mag);
-    final uClamped = u.clamp(0.0, 1.0);
-    final closest = Offset(lineStart.dx + uClamped * dx, lineStart.dy + uClamped * dy);
-    return (point - closest).distance;
-  }
-
   @override
   bool hitTest(Offset point) {
-    return _perpendicularDistance(point, startPoint, endPoint) <= 5.0;
+    return perpendicularDistance(point, startPoint, endPoint) <= 5.0;
   }
 
   @override

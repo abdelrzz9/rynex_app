@@ -22,12 +22,6 @@ class ImageShape extends ShapeEntity {
   }) : super(type: ShapeType.image);
 
   @override
-  bool hitTest(Offset point) {
-    final local = ShapeEntity.rotatePoint(point, center, -rotation);
-    return boundingBox.contains(local);
-  }
-
-  @override
   Map<String, dynamic> toJson() => {
         'id': id,
         'type': 'image',

@@ -107,12 +107,6 @@ class RoundedRectShape extends RectangleShape {
   }) : super(cornerRadius: 0.0);
 
   @override
-  bool hitTest(Offset point) {
-    final local = ShapeEntity.rotatePoint(point, center, -rotation);
-    return boundingBox.contains(local);
-  }
-
-  @override
   Map<String, dynamic> toJson() => {
         ...super.toJson(),
         'type': 'roundedRect',

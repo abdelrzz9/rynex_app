@@ -27,12 +27,6 @@ class TextShape extends ShapeEntity {
   }) : super(type: ShapeType.text);
 
   @override
-  bool hitTest(Offset point) {
-    final local = ShapeEntity.rotatePoint(point, center, -rotation);
-    return boundingBox.contains(local);
-  }
-
-  @override
   Map<String, dynamic> toJson() => {
         'id': id,
         'type': 'text',
