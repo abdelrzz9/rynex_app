@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../providers/canvas_provider.dart';
 import '../../../history/presentation/providers/history_provider.dart';
 import '../../../shapes/presentation/providers/shape_provider.dart';
+import '../../../../core/services/export_service.dart';
 
 class TopToolbar extends ConsumerWidget {
   const TopToolbar({super.key});
@@ -111,13 +113,22 @@ class TopToolbar extends ConsumerWidget {
       items: [
         const PopupMenuItem(value: 'clear', child: Text('Clear Canvas')),
         const PopupMenuItem(value: 'export_png', child: Text('Export as PNG')),
-        const PopupMenuItem(value: 'export_svg', child: Text('Export as SVG')),
         const PopupMenuItem(value: 'export_json', child: Text('Export as JSON')),
       ],
-    ).then((value) {
+    ).then((value) async {
       if (value == 'clear') {
         ref.read(shapeListProvider.notifier).clearAll();
         ref.read(historyProvider.notifier).clear();
+      } else if (value == 'export_png') {
+        final repaintKey = ref.read(canvasRepaintKeyProvider);
+        if (repaintKey == null) return;
+        final shapes = ref.read(shapeListProvider);
+        if (shapes.isEmpty) return;
+        await ExportService().exportPng(shapes, ExportService.calculateContentBounds(shapes), repaintKey);
+      } else if (value == 'export_json') {
+        final shapes = ref.read(shapeListProvider);
+        if (shapes.isEmpty) return;
+        await ExportService().exportJson(shapes);
       }
     });
   }

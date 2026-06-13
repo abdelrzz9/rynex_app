@@ -16,11 +16,24 @@ class InfiniteCanvas extends ConsumerStatefulWidget {
 
 class _InfiniteCanvasState extends ConsumerState<InfiniteCanvas> {
   List<ShapeEntity> _previousShapes = [];
+  final GlobalKey _repaintKey = GlobalKey();
+  bool _disposed = false;
 
   @override
   void initState() {
     super.initState();
     _previousShapes = [];
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_disposed && mounted) {
+        ref.read(canvasRepaintKeyProvider.notifier).state = _repaintKey;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 
   @override
@@ -35,6 +48,7 @@ class _InfiniteCanvasState extends ConsumerState<InfiniteCanvas> {
 
     return ClipRect(
       child: RepaintBoundary(
+        key: _repaintKey,
         child: CustomPaint(
           painter: CanvasEngine(
             shapes: shapes,

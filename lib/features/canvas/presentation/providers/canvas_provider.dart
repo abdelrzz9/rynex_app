@@ -93,3 +93,5 @@ class CanvasNotifier extends StateNotifier<CanvasState> {
 final canvasTransformProvider = Provider<CanvasTransform>((ref) {
   return ref.watch(canvasProvider.select((s) => s.transform));
 });
+
+final canvasRepaintKeyProvider = StateProvider<GlobalKey?>((ref) => null);
