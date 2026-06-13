@@ -95,3 +95,12 @@ final canvasTransformProvider = Provider<CanvasTransform>((ref) {
 });
 
 final canvasRepaintKeyProvider = StateProvider<GlobalKey?>((ref) => null);
+
+final screenSizeProvider = StateProvider<Size>((ref) => Size.zero);
+
+final viewportProvider = Provider<Rect>((ref) {
+  final transform = ref.watch(canvasTransformProvider);
+  final screenSize = ref.watch(screenSizeProvider);
+  if (screenSize == Size.zero) return Rect.zero;
+  return transform.getVisibleWorldRect(screenSize);
+});

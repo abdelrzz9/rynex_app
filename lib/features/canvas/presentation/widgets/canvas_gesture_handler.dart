@@ -25,8 +25,9 @@ import '../providers/canvas_provider.dart';
 
 class CanvasGestureHandler extends ConsumerStatefulWidget {
   final Widget child;
+  final bool drawingEnabled;
 
-  const CanvasGestureHandler({required this.child, super.key});
+  const CanvasGestureHandler({required this.child, this.drawingEnabled = false, super.key});
 
   @override
   ConsumerState<CanvasGestureHandler> createState() => _CanvasGestureHandlerState();
@@ -38,9 +39,6 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
   List<Offset> _freehandPoints = [];
   Offset? _selectionDragStart;
   Map<String, Offset> _selectedShapePositions = {};
-  Offset? _previousFocalPoint;
-  double? _previousScale;
-  bool _isPanning = false;
 
   Offset? activeDrawStart;
   Offset? activeDrawEnd;
@@ -62,31 +60,20 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
   }
 
   void _onScaleStart(ScaleStartDetails details) {
-    _previousFocalPoint = details.localFocalPoint;
-    _previousScale = 1.0;
-    _isPanning = false;
-
     final tool = ref.read(activeToolProvider);
     if (tool == DrawingTool.select) {
       _handleSelectStart(details);
-    } else if (tool != DrawingTool.image && tool != DrawingTool.text) {
+    } else {
       _handleDrawStart(details);
     }
   }
 
   void _onScaleUpdate(ScaleUpdateDetails details) {
-    if (details.pointerCount >= 2) {
-      _handleZoomPan(details);
-      return;
-    }
-
     final tool = ref.read(activeToolProvider);
     if (tool == DrawingTool.select) {
       _handleSelectUpdate(details);
-    } else if (_drawStart != null && tool != DrawingTool.image && tool != DrawingTool.text) {
+    } else if (_drawStart != null) {
       _handleDrawUpdate(details);
-    } else {
-      _handlePan(details);
     }
   }
 
@@ -94,7 +81,7 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
     final tool = ref.read(activeToolProvider);
     if (tool == DrawingTool.select) {
       _finishSelect();
-    } else if (_drawStart != null && _drawCurrent != null && tool != DrawingTool.image && tool != DrawingTool.text) {
+    } else if (_drawStart != null && _drawCurrent != null) {
       _finishDrawing(tool);
     }
 
@@ -103,9 +90,6 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
     _freehandPoints = [];
     _selectionDragStart = null;
     _selectedShapePositions = {};
-    _previousFocalPoint = null;
-    _previousScale = null;
-    _isPanning = false;
 
     activeDrawStart = null;
     activeDrawEnd = null;
@@ -315,32 +299,6 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
     ref.read(historyProvider.notifier).executeAdd(shape);
     ref.read(activeToolProvider.notifier).state = DrawingTool.select;
     ref.read(selectionProvider.notifier).select(id);
-  }
-
-  void _handleZoomPan(ScaleUpdateDetails details) {
-    final focalPoint = details.localFocalPoint;
-    if (_previousFocalPoint != null) {
-      final delta = focalPoint - _previousFocalPoint!;
-      ref.read(canvasProvider.notifier).panBy(delta);
-    }
-    if (_previousScale != null && details.scale != 1.0) {
-      final scaleDelta = details.scale - _previousScale!;
-      ref.read(canvasProvider.notifier).zoomToPoint(focalPoint, scaleDelta * 10);
-    }
-    _previousFocalPoint = focalPoint;
-    _previousScale = details.scale;
-  }
-
-  void _handlePan(ScaleUpdateDetails details) {
-    if (!_isPanning) {
-      final delta = (details.localFocalPoint - _previousFocalPoint!).distance;
-      if (delta > 5) _isPanning = true;
-    }
-    if (_isPanning && _previousFocalPoint != null) {
-      final delta = details.localFocalPoint - _previousFocalPoint!;
-      ref.read(canvasProvider.notifier).panBy(delta);
-    }
-    _previousFocalPoint = details.localFocalPoint;
   }
 
   ShapeEntity? _hitTestTopmost(List<ShapeEntity> shapes, Offset worldPoint) {
