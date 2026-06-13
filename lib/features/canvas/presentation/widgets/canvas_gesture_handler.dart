@@ -7,6 +7,8 @@ import '../../../../core/constants/tool_constants.dart';
 import '../../../../core/utils/geometry_utils.dart';
 import '../../../../core/utils/uuid_generator.dart';
 import '../../../history/presentation/providers/history_provider.dart';
+import '../../../layers/domain/entities/layer.dart';
+import '../../../layers/presentation/providers/layer_provider.dart';
 import '../../../selection/domain/entities/selection_state.dart';
 import '../../../selection/presentation/providers/selection_provider.dart';
 import '../../../shapes/domain/entities/arrow_shape.dart';
@@ -378,7 +380,7 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
     if (tool == DrawingTool.freehand) {
       if (_freehandPoints.length >= 3) {
         final simplified = simplifyPoints(_freehandPoints, CanvasConstants.freehandSimplifyEpsilon);
-        final shape = FreehandShape(id: UuidGenerator.generate(), points: simplified, style: style);
+        final shape = FreehandShape(id: UuidGenerator.generate(), points: simplified, style: style, layer: _activeLayerInfo());
         ref.read(historyProvider.notifier).executeAdd(shape);
       }
       return;
@@ -397,17 +399,17 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
 
     switch (tool) {
       case DrawingTool.rectangle:
-        shape = RectangleShape(id: id, boundingBox: normalizedRect, style: style);
+        shape = RectangleShape(id: id, boundingBox: normalizedRect, style: style, layer: _activeLayerInfo());
       case DrawingTool.ellipse:
-        shape = EllipseShape(id: id, boundingBox: normalizedRect, style: style);
+        shape = EllipseShape(id: id, boundingBox: normalizedRect, style: style, layer: _activeLayerInfo());
       case DrawingTool.diamond:
-        shape = DiamondShape(id: id, boundingBox: normalizedRect, style: style);
+        shape = DiamondShape(id: id, boundingBox: normalizedRect, style: style, layer: _activeLayerInfo());
       case DrawingTool.triangle:
-        shape = TriangleShape(id: id, boundingBox: normalizedRect, style: style);
+        shape = TriangleShape(id: id, boundingBox: normalizedRect, style: style, layer: _activeLayerInfo());
       case DrawingTool.line:
-        shape = LineShape(id: id, startPoint: _drawStart!, endPoint: _drawCurrent!, style: style);
+        shape = LineShape(id: id, startPoint: _drawStart!, endPoint: _drawCurrent!, style: style, layer: _activeLayerInfo());
       case DrawingTool.arrow:
-        shape = ArrowShape(id: id, startPoint: _drawStart!, endPoint: _drawCurrent!, style: style);
+        shape = ArrowShape(id: id, startPoint: _drawStart!, endPoint: _drawCurrent!, style: style, layer: _activeLayerInfo());
       default:
         break;
     }
@@ -430,6 +432,7 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
         strokeColor: style.strokeColor,
         fillColor: Colors.transparent,
       ),
+      layer: _activeLayerInfo(),
     );
     ref.read(historyProvider.notifier).executeAdd(shape);
     ref.read(activeToolProvider.notifier).state = DrawingTool.select;
@@ -445,10 +448,27 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
       boundingBox: Rect.fromCenter(center: worldPoint, width: 100, height: 100),
       imageBytes: Uint8List(0),
       originalSize: const Size(100, 100),
+      layer: _activeLayerInfo(),
     );
     ref.read(historyProvider.notifier).executeAdd(shape);
     ref.read(activeToolProvider.notifier).state = DrawingTool.select;
     ref.read(selectionProvider.notifier).select(id);
+  }
+
+  LayerInfo _activeLayerInfo() {
+    final layers = ref.read(layerListProvider);
+    final activeId = ref.read(activeLayerIdProvider);
+    LayerEntity? active;
+    for (final l in layers) {
+      if (l.id == activeId) { active = l; break; }
+    }
+    active ??= layers.last;
+    return LayerInfo(
+      order: active.order,
+      isVisible: active.isVisible,
+      isLocked: active.isLocked,
+      name: active.name,
+    );
   }
 
   ShapeEntity? _hitTestTopmost(List<ShapeEntity> shapes, Offset worldPoint) {

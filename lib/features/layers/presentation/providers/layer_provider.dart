@@ -3,6 +3,8 @@ import '../../../shapes/domain/entities/shape_entity.dart';
 import '../../../shapes/presentation/providers/shape_provider.dart';
 import '../../domain/entities/layer.dart';
 
+final activeLayerIdProvider = StateProvider<int>((ref) => 0);
+
 final layerListProvider = StateNotifierProvider<LayerListNotifier, List<LayerEntity>>(
   (ref) => LayerListNotifier(ref),
 );
