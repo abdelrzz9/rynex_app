@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../shapes/domain/entities/shape_entity.dart';
 import '../../shapes/domain/entities/rectangle_shape.dart';
@@ -18,6 +19,7 @@ import '../../shapes/domain/value_objects/stroke_style.dart';
 import '../../selection/domain/entities/selection_state.dart';
 import '../domain/entities/canvas_transform.dart';
 import '../../../core/constants/canvas_constants.dart';
+import 'picture_recorder_manager.dart';
 
 class CanvasEngine extends CustomPainter {
   final List<ShapeEntity> shapes;
@@ -30,6 +32,8 @@ class CanvasEngine extends CustomPainter {
   final ShapeStyle? activeDrawingStyle;
   final ShapeType? activeShapeType;
 
+  final PictureRecorderManager? pictureCache;
+
   CanvasEngine({
     required this.shapes,
     required this.transform,
@@ -40,6 +44,7 @@ class CanvasEngine extends CustomPainter {
     this.activeDrawingEnd,
     this.activeDrawingStyle,
     this.activeShapeType,
+    this.pictureCache,
   });
 
   @override
@@ -108,40 +113,58 @@ class CanvasEngine extends CustomPainter {
   }
 
   void _paintShape(Canvas canvas, ShapeEntity shape) {
-    canvas.save();
-    if (shape.style.opacity < 1.0) {
-      canvas.saveLayer(shape.rotatedBoundingBox, Paint()..color = Color.fromRGBO(0, 0, 0, shape.style.opacity));
+    final cached = pictureCache?.get(shape.id);
+    if (cached != null) {
+      canvas.save();
+      canvas.drawPicture(cached);
+      canvas.restore();
+      return;
     }
 
-    canvas.translate(shape.center.dx, shape.center.dy);
-    canvas.rotate(shape.rotation);
-    canvas.translate(-shape.center.dx, -shape.center.dy);
+    final recorder = ui.PictureRecorder();
+    final recordCanvas = Canvas(recorder);
+    recordCanvas.save();
+
+    if (shape.style.opacity < 1.0) {
+      recordCanvas.saveLayer(shape.rotatedBoundingBox, Paint()..color = Color.fromRGBO(0, 0, 0, shape.style.opacity));
+    }
+
+    recordCanvas.translate(shape.center.dx, shape.center.dy);
+    recordCanvas.rotate(shape.rotation);
+    recordCanvas.translate(-shape.center.dx, -shape.center.dy);
 
     switch (shape.type) {
       case ShapeType.rectangle:
       case ShapeType.roundedRect:
-        _paintRectangle(canvas, shape as RectangleShape);
+        _paintRectangle(recordCanvas, shape as RectangleShape);
       case ShapeType.ellipse:
-        _paintEllipse(canvas, shape as EllipseShape);
+        _paintEllipse(recordCanvas, shape as EllipseShape);
       case ShapeType.diamond:
-        _paintDiamond(canvas, shape as DiamondShape);
+        _paintDiamond(recordCanvas, shape as DiamondShape);
       case ShapeType.triangle:
-        _paintTriangle(canvas, shape as TriangleShape);
+        _paintTriangle(recordCanvas, shape as TriangleShape);
       case ShapeType.line:
-        _paintLine(canvas, shape as LineShape);
+        _paintLine(recordCanvas, shape as LineShape);
       case ShapeType.arrow:
-        _paintArrow(canvas, shape as ArrowShape);
+        _paintArrow(recordCanvas, shape as ArrowShape);
       case ShapeType.freehand:
-        _paintFreehand(canvas, shape as FreehandShape);
+        _paintFreehand(recordCanvas, shape as FreehandShape);
       case ShapeType.text:
-        _paintText(canvas, shape as TextShape);
+        _paintText(recordCanvas, shape as TextShape);
       case ShapeType.image:
-        _paintImage(canvas, shape as ImageShape);
+        _paintImage(recordCanvas, shape as ImageShape);
     }
 
     if (shape.style.opacity < 1.0) {
-      canvas.restore();
+      recordCanvas.restore();
     }
+    recordCanvas.restore();
+
+    final picture = recorder.endRecording();
+    pictureCache?.cache(shape.id, picture);
+
+    canvas.save();
+    canvas.drawPicture(picture);
     canvas.restore();
   }
 
@@ -565,6 +588,7 @@ class CanvasEngine extends CustomPainter {
         oldDelegate.activeDrawingStart != activeDrawingStart ||
         oldDelegate.activeDrawingEnd != activeDrawingEnd ||
         oldDelegate.activeDrawingStyle != activeDrawingStyle ||
-        oldDelegate.activeShapeType != activeShapeType;
+        oldDelegate.activeShapeType != activeShapeType ||
+        oldDelegate.pictureCache != pictureCache;
   }
 }

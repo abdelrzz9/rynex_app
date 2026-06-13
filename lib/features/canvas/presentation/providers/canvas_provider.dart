@@ -3,6 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/canvas_state.dart';
 import '../../domain/entities/canvas_transform.dart';
 import '../../../../core/constants/canvas_constants.dart';
+import '../../engine/picture_recorder_manager.dart';
+
+final pictureRecorderManagerProvider = Provider<PictureRecorderManager>((ref) {
+  final manager = PictureRecorderManager();
+  ref.onDispose(() => manager.dispose());
+  return manager;
+});
 
 final canvasProvider =
     StateNotifierProvider<CanvasNotifier, CanvasState>(
