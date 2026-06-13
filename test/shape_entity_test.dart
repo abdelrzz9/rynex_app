@@ -7,7 +7,6 @@ import 'package:rynex_app/features/shapes/domain/entities/freehand_shape.dart';
 import 'package:rynex_app/features/shapes/domain/entities/line_shape.dart';
 import 'package:rynex_app/features/shapes/domain/entities/rectangle_shape.dart';
 import 'package:rynex_app/features/shapes/domain/entities/shape.dart';
-import 'package:rynex_app/features/shapes/domain/entities/shape_entity.dart';
 import 'package:rynex_app/features/shapes/domain/entities/shape_factory.dart';
 import 'package:rynex_app/features/shapes/domain/entities/shape_type.dart';
 import 'package:rynex_app/features/shapes/domain/entities/text_shape.dart';
@@ -200,7 +199,7 @@ void main() {
     test('simplifies points on creation', () {
       final fh = FreehandShape(
         id: 'fh1',
-        points: [const Offset(0, 0), const Offset(1, 1), const Offset(2, 2), const Offset(100, 0)],
+        points: const [Offset(0, 0), Offset(1, 1), Offset(2, 2), Offset(100, 0)],
       );
       expect(fh.points.length, greaterThanOrEqualTo(2));
       expect(fh.isClosed, false);

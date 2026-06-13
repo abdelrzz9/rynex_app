@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rynex_app/core/utils/geometry_utils.dart';
 
@@ -17,7 +16,7 @@ void main() {
     });
 
     test('handles degenerate line (same points)', () {
-      final p = const Offset(5, 5);
+      const p = Offset(5, 5);
       expect(perpendicularDistance(p, p, p), closeTo(0, 1e-10));
     });
   });

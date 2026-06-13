@@ -52,7 +52,7 @@ void main() {
     });
 
     test('copyWith updates zoom', () {
-      const t = CanvasTransform(zoom: 1.0);
+      const t = CanvasTransform();
       final updated = t.copyWith(zoom: 2.5);
       expect(updated.zoom, 2.5);
       expect(updated.pan, Offset.zero);

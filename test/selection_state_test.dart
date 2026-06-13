@@ -35,13 +35,13 @@ void main() {
     });
 
     test('copyWith clears marquee', () {
-      final state = SelectionState(marqueeRect: const Rect.fromLTWH(0, 0, 100, 100));
+      const state = SelectionState(marqueeRect: Rect.fromLTWH(0, 0, 100, 100));
       final cleared = state.copyWith(clearMarquee: true);
       expect(cleared.hasMarquee, false);
     });
 
     test('copyWith clears active handle', () {
-      final state = SelectionState(activeHandle: HandleType.topLeft);
+      const state = SelectionState(activeHandle: HandleType.topLeft);
       final cleared = state.copyWith(clearActiveHandle: true);
       expect(cleared.hasActiveHandle, false);
     });

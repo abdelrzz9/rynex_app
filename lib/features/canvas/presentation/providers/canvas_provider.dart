@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/canvas_constants.dart';
+import '../../domain/entities/camera.dart';
 import '../../domain/entities/canvas_state.dart';
 import '../../domain/entities/canvas_transform.dart';
 import '../../engine/picture_recorder_manager.dart';
@@ -88,10 +89,21 @@ class CanvasNotifier extends StateNotifier<CanvasState> {
   void toggleSnap() {
     state = state.copyWith(snapToGrid: !state.snapToGrid);
   }
+
+  void syncFromCamera(Camera camera) {
+    state = state.copyWith(
+      transform: CanvasTransform(zoom: camera.zoom, pan: camera.pan),
+    );
+  }
 }
 
 final canvasTransformProvider = Provider<CanvasTransform>((ref) {
   return ref.watch(canvasProvider.select((s) => s.transform));
+});
+
+final cameraProvider = Provider<Camera>((ref) {
+  final transform = ref.watch(canvasTransformProvider);
+  return Camera(zoom: transform.zoom, pan: transform.pan);
 });
 
 final canvasRepaintKeyProvider = StateProvider<GlobalKey?>((ref) => null);
