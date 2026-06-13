@@ -1,56 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'domain/repositories/auth_repository.dart';
-import 'presentation/auth/auth_gate.dart';
+import 'core/di/injection_container.dart';
+import 'core/router/app_router.dart';
+import 'core/theme/app_theme.dart';
 
-class RynexApp extends StatefulWidget {
-  const RynexApp({
-    required this.authStore,
-    super.key,
-  });
-
-  final AuthRepository authStore;
+class RynexApp extends ConsumerWidget {
+  const RynexApp({super.key});
 
   @override
-  State<RynexApp> createState() => _RynexAppState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = ref.watch(themeModeProvider);
 
-class _RynexAppState extends State<RynexApp> {
-  late bool _isDarkMode;
-
-  @override
-  void initState() {
-    super.initState();
-    _isDarkMode = widget.authStore.isDarkMode;
-  }
-
-  Future<void> _setDarkMode(bool value) async {
-    setState(() => _isDarkMode = value);
-    await widget.authStore.setDarkMode(value);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      title: 'Rynex Drawing & Notes',
-      themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.indigo,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
-      home: AuthGate(
-        authStore: widget.authStore,
-        isDarkMode: _isDarkMode,
-        onDarkModeChanged: _setDarkMode,
-      ),
+      title: 'Rynex Draw',
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
+      routerConfig: appRouter,
     );
   }
 }
