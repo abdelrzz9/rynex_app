@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'dart:ui' as ui;
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -533,15 +535,33 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
     ref.read(selectionProvider.notifier).select(id);
   }
 
-  void _handleAddImage(Offset screenPoint) {
+  Future<void> _handleAddImage(Offset screenPoint) async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image);
+    if (result == null || result.files.isEmpty) return;
+    final bytes = result.files.first.bytes;
+    if (bytes == null || bytes.isEmpty) return;
+
     final transform = ref.read(canvasTransformProvider);
     final worldPoint = transform.screenToWorld(screenPoint);
+
+    final codec = await ui.instantiateImageCodec(bytes);
+    final frame = await codec.getNextFrame();
+    final decodedImage = frame.image;
+    final originalSize = Size(decodedImage.width.toDouble(), decodedImage.height.toDouble());
+
+    const maxDim = 300.0;
+    final scale = min(maxDim / originalSize.width, maxDim / originalSize.height);
+    final displaySize = Size(originalSize.width * scale, originalSize.height * scale);
+
     final id = UuidGenerator.generate();
+    final pictureCache = ref.read(pictureRecorderManagerProvider);
+    pictureCache.cacheImage(id, decodedImage);
+
     final shape = ImageShape(
       id: id,
-      boundingBox: Rect.fromCenter(center: worldPoint, width: 100, height: 100),
-      imageBytes: Uint8List(0),
-      originalSize: const Size(100, 100),
+      boundingBox: Rect.fromCenter(center: worldPoint, width: displaySize.width, height: displaySize.height),
+      imageBytes: bytes,
+      originalSize: originalSize,
       layer: _activeLayerInfo(),
     );
     ref.read(historyProvider.notifier).executeAdd(shape);

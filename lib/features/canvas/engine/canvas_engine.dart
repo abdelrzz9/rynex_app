@@ -413,8 +413,17 @@ class CanvasEngine extends CustomPainter {
   }
 
   void _paintImage(Canvas canvas, ImageShape shape) {
-    // Image painting is done via the shape's own cached image
-    // For now, draw a placeholder
+    final cachedImage = pictureCache?.getImage(shape.id);
+    if (cachedImage != null) {
+      final paint = Paint()..color = Colors.white.withValues(alpha: shape.style.opacity);
+      canvas.drawImageRect(
+        cachedImage,
+        Rect.fromLTWH(0, 0, cachedImage.width.toDouble(), cachedImage.height.toDouble()),
+        shape.boundingBox,
+        paint,
+      );
+      return;
+    }
     final paint = Paint()
       ..color = Colors.grey.withValues(alpha: 0.3);
     canvas.drawRect(shape.boundingBox, paint);
