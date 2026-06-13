@@ -14,6 +14,13 @@ class DrawingToolbar extends ConsumerWidget {
     final selectedColor = isDark ? Colors.blue.shade700 : Colors.blue.shade100;
     final iconColor = isDark ? Colors.white70 : Colors.black87;
 
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final isShort = screenHeight < 600;
+
+    final iconSize = isShort ? 20.0 : 22.0;
+    const buttonWidth = 48.0;
+    final buttonHeight = isShort ? 40.0 : 48.0;
+
     return Container(
       decoration: BoxDecoration(
         color: bgColor,
@@ -25,103 +32,139 @@ class DrawingToolbar extends ConsumerWidget {
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _ToolButton(
-            tool: DrawingTool.select,
-            icon: Icons.pan_tool_outlined,
-            shortcut: 'V',
-            isActive: activeTool == DrawingTool.select,
-            selectedColor: selectedColor,
-            iconColor: iconColor,
-            onTap: () => ref.read(activeToolProvider.notifier).state = DrawingTool.select,
+      child: SizedBox(
+        width: buttonWidth,
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _ToolButton(
+                tool: DrawingTool.select,
+                icon: Icons.pan_tool_outlined,
+                shortcut: 'V',
+                isActive: activeTool == DrawingTool.select,
+                selectedColor: selectedColor,
+                iconColor: iconColor,
+                iconSize: iconSize,
+                buttonHeight: buttonHeight,
+                buttonWidth: buttonWidth,
+                onTap: () => ref.read(activeToolProvider.notifier).state = DrawingTool.select,
+              ),
+              const Divider(height: 1),
+              _ToolButton(
+                tool: DrawingTool.rectangle,
+                icon: Icons.rectangle_outlined,
+                shortcut: 'R',
+                isActive: activeTool == DrawingTool.rectangle,
+                selectedColor: selectedColor,
+                iconColor: iconColor,
+                iconSize: iconSize,
+                buttonHeight: buttonHeight,
+                buttonWidth: buttonWidth,
+                onTap: () => ref.read(activeToolProvider.notifier).state = DrawingTool.rectangle,
+              ),
+              _ToolButton(
+                tool: DrawingTool.ellipse,
+                icon: Icons.circle_outlined,
+                shortcut: 'O',
+                isActive: activeTool == DrawingTool.ellipse,
+                selectedColor: selectedColor,
+                iconColor: iconColor,
+                iconSize: iconSize,
+                buttonHeight: buttonHeight,
+                buttonWidth: buttonWidth,
+                onTap: () => ref.read(activeToolProvider.notifier).state = DrawingTool.ellipse,
+              ),
+              _ToolButton(
+                tool: DrawingTool.diamond,
+                icon: Icons.diamond_outlined,
+                shortcut: 'D',
+                isActive: activeTool == DrawingTool.diamond,
+                selectedColor: selectedColor,
+                iconColor: iconColor,
+                iconSize: iconSize,
+                buttonHeight: buttonHeight,
+                buttonWidth: buttonWidth,
+                onTap: () => ref.read(activeToolProvider.notifier).state = DrawingTool.diamond,
+              ),
+              _ToolButton(
+                tool: DrawingTool.triangle,
+                icon: Icons.change_history,
+                shortcut: 'T',
+                isActive: activeTool == DrawingTool.triangle,
+                selectedColor: selectedColor,
+                iconColor: iconColor,
+                iconSize: iconSize,
+                buttonHeight: buttonHeight,
+                buttonWidth: buttonWidth,
+                onTap: () => ref.read(activeToolProvider.notifier).state = DrawingTool.triangle,
+              ),
+              const Divider(height: 1),
+              _ToolButton(
+                tool: DrawingTool.line,
+                icon: Icons.show_chart,
+                shortcut: 'L',
+                isActive: activeTool == DrawingTool.line,
+                selectedColor: selectedColor,
+                iconColor: iconColor,
+                iconSize: iconSize,
+                buttonHeight: buttonHeight,
+                buttonWidth: buttonWidth,
+                onTap: () => ref.read(activeToolProvider.notifier).state = DrawingTool.line,
+              ),
+              _ToolButton(
+                tool: DrawingTool.arrow,
+                icon: Icons.arrow_forward,
+                shortcut: 'A',
+                isActive: activeTool == DrawingTool.arrow,
+                selectedColor: selectedColor,
+                iconColor: iconColor,
+                iconSize: iconSize,
+                buttonHeight: buttonHeight,
+                buttonWidth: buttonWidth,
+                onTap: () => ref.read(activeToolProvider.notifier).state = DrawingTool.arrow,
+              ),
+              _ToolButton(
+                tool: DrawingTool.freehand,
+                icon: Icons.brush,
+                shortcut: 'P',
+                isActive: activeTool == DrawingTool.freehand,
+                selectedColor: selectedColor,
+                iconColor: iconColor,
+                iconSize: iconSize,
+                buttonHeight: buttonHeight,
+                buttonWidth: buttonWidth,
+                onTap: () => ref.read(activeToolProvider.notifier).state = DrawingTool.freehand,
+              ),
+              const Divider(height: 1),
+              _ToolButton(
+                tool: DrawingTool.text,
+                icon: Icons.text_fields,
+                shortcut: 'X',
+                isActive: activeTool == DrawingTool.text,
+                selectedColor: selectedColor,
+                iconColor: iconColor,
+                iconSize: iconSize,
+                buttonHeight: buttonHeight,
+                buttonWidth: buttonWidth,
+                onTap: () => ref.read(activeToolProvider.notifier).state = DrawingTool.text,
+              ),
+              _ToolButton(
+                tool: DrawingTool.image,
+                icon: Icons.image_outlined,
+                shortcut: 'I',
+                isActive: activeTool == DrawingTool.image,
+                selectedColor: selectedColor,
+                iconColor: iconColor,
+                iconSize: iconSize,
+                buttonHeight: buttonHeight,
+                buttonWidth: buttonWidth,
+                onTap: () => ref.read(activeToolProvider.notifier).state = DrawingTool.image,
+              ),
+            ],
           ),
-          const Divider(height: 1),
-          _ToolButton(
-            tool: DrawingTool.rectangle,
-            icon: Icons.rectangle_outlined,
-            shortcut: 'R',
-            isActive: activeTool == DrawingTool.rectangle,
-            selectedColor: selectedColor,
-            iconColor: iconColor,
-            onTap: () => ref.read(activeToolProvider.notifier).state = DrawingTool.rectangle,
-          ),
-          _ToolButton(
-            tool: DrawingTool.ellipse,
-            icon: Icons.circle_outlined,
-            shortcut: 'O',
-            isActive: activeTool == DrawingTool.ellipse,
-            selectedColor: selectedColor,
-            iconColor: iconColor,
-            onTap: () => ref.read(activeToolProvider.notifier).state = DrawingTool.ellipse,
-          ),
-          _ToolButton(
-            tool: DrawingTool.diamond,
-            icon: Icons.diamond_outlined,
-            shortcut: 'D',
-            isActive: activeTool == DrawingTool.diamond,
-            selectedColor: selectedColor,
-            iconColor: iconColor,
-            onTap: () => ref.read(activeToolProvider.notifier).state = DrawingTool.diamond,
-          ),
-          _ToolButton(
-            tool: DrawingTool.triangle,
-            icon: Icons.change_history,
-            shortcut: 'T',
-            isActive: activeTool == DrawingTool.triangle,
-            selectedColor: selectedColor,
-            iconColor: iconColor,
-            onTap: () => ref.read(activeToolProvider.notifier).state = DrawingTool.triangle,
-          ),
-          const Divider(height: 1),
-          _ToolButton(
-            tool: DrawingTool.line,
-            icon: Icons.show_chart,
-            shortcut: 'L',
-            isActive: activeTool == DrawingTool.line,
-            selectedColor: selectedColor,
-            iconColor: iconColor,
-            onTap: () => ref.read(activeToolProvider.notifier).state = DrawingTool.line,
-          ),
-          _ToolButton(
-            tool: DrawingTool.arrow,
-            icon: Icons.arrow_forward,
-            shortcut: 'A',
-            isActive: activeTool == DrawingTool.arrow,
-            selectedColor: selectedColor,
-            iconColor: iconColor,
-            onTap: () => ref.read(activeToolProvider.notifier).state = DrawingTool.arrow,
-          ),
-          _ToolButton(
-            tool: DrawingTool.freehand,
-            icon: Icons.brush,
-            shortcut: 'P',
-            isActive: activeTool == DrawingTool.freehand,
-            selectedColor: selectedColor,
-            iconColor: iconColor,
-            onTap: () => ref.read(activeToolProvider.notifier).state = DrawingTool.freehand,
-          ),
-          const Divider(height: 1),
-          _ToolButton(
-            tool: DrawingTool.text,
-            icon: Icons.text_fields,
-            shortcut: 'X',
-            isActive: activeTool == DrawingTool.text,
-            selectedColor: selectedColor,
-            iconColor: iconColor,
-            onTap: () => ref.read(activeToolProvider.notifier).state = DrawingTool.text,
-          ),
-          _ToolButton(
-            tool: DrawingTool.image,
-            icon: Icons.image_outlined,
-            shortcut: 'I',
-            isActive: activeTool == DrawingTool.image,
-            selectedColor: selectedColor,
-            iconColor: iconColor,
-            onTap: () => ref.read(activeToolProvider.notifier).state = DrawingTool.image,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -134,6 +177,9 @@ class _ToolButton extends StatelessWidget {
   final bool isActive;
   final Color selectedColor;
   final Color iconColor;
+  final double iconSize;
+  final double buttonHeight;
+  final double buttonWidth;
   final VoidCallback onTap;
 
   const _ToolButton({
@@ -143,6 +189,9 @@ class _ToolButton extends StatelessWidget {
     required this.isActive,
     required this.selectedColor,
     required this.iconColor,
+    required this.iconSize,
+    required this.buttonHeight,
+    required this.buttonWidth,
     required this.onTap,
   });
 
@@ -156,9 +205,9 @@ class _ToolButton extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: SizedBox(
-            width: 48,
-            height: 44,
-            child: Icon(icon, size: 22, color: isActive ? Colors.blue : iconColor),
+            width: buttonWidth,
+            height: buttonHeight,
+            child: Icon(icon, size: iconSize, color: isActive ? Colors.blue : iconColor),
           ),
         ),
       ),

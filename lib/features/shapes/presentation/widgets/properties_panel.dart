@@ -22,8 +22,13 @@ class PropertiesPanel extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? Colors.grey.shade900 : Colors.white;
 
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final panelWidth = screenWidth < 1024
+        ? 220.0
+        : (screenWidth * 0.2).clamp(220.0, 260.0);
+
     return Container(
-      width: 260,
+      width: panelWidth,
       decoration: BoxDecoration(
         color: bgColor,
         boxShadow: [

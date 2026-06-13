@@ -18,7 +18,18 @@ class TopToolbar extends ConsumerWidget {
     final bgColor = isDark ? Colors.grey.shade900 : Colors.white;
     final fgColor = isDark ? Colors.white70 : Colors.black87;
 
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isMobile = screenWidth < 600;
+    final isTablet = screenWidth >= 600 && screenWidth < 1200;
+
+    final iconSize = isMobile ? 18.0 : isTablet ? 20.0 : 22.0;
+    final buttonSize = isMobile ? 48.0 : isTablet ? 44.0 : 40.0;
+    final toolbarHeight = isMobile ? 56.0 : isTablet ? 64.0 : 72.0;
+    final spacing = isMobile ? 2.0 : isTablet ? 4.0 : 6.0;
+    final horizontalPadding = isMobile ? 4.0 : isTablet ? 8.0 : 12.0;
+
     return Container(
+      height: toolbarHeight,
       decoration: BoxDecoration(
         color: bgColor,
         boxShadow: [
@@ -29,7 +40,7 @@ class TopToolbar extends ConsumerWidget {
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: Row(
         children: [
           IconButton(
@@ -37,77 +48,107 @@ class TopToolbar extends ConsumerWidget {
             tooltip: 'Back to Home',
             onPressed: () => context.goNamed('home'),
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            constraints: BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
           ),
-          const SizedBox(width: 4),
-          const Text('Rynex Draw', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(width: 16),
-          const Spacer(),
-          _IconButton(
-            icon: Icons.undo,
-            tooltip: 'Undo (Ctrl+Z)',
-            enabled: canUndo,
-            onTap: () => ref.read(historyProvider.notifier).undo(),
-          ),
-          _IconButton(
-            icon: Icons.redo,
-            tooltip: 'Redo (Ctrl+Y)',
-            enabled: canRedo,
-            onTap: () => ref.read(historyProvider.notifier).redo(),
-          ),
-          const SizedBox(width: 8),
-          Container(height: 24, width: 1, color: Colors.grey.shade400),
-          const SizedBox(width: 8),
-          _IconButton(
-            icon: Icons.zoom_out,
-            tooltip: 'Zoom Out',
-            enabled: true,
-            onTap: () => ref.read(canvasProvider.notifier).zoomOut(Offset.zero),
-          ),
-          Text(
-            '${(canvasState.transform.zoom * 100).round()}%',
-            style: TextStyle(fontSize: 13, color: fgColor),
-          ),
-          _IconButton(
-            icon: Icons.zoom_in,
-            tooltip: 'Zoom In',
-            enabled: true,
-            onTap: () => ref.read(canvasProvider.notifier).zoomIn(Offset.zero),
-          ),
-          _IconButton(
-            icon: Icons.fit_screen,
-            tooltip: 'Zoom to Fit',
-            enabled: true,
-            onTap: () {
-              final shapes = ref.read(shapeListProvider);
-              if (shapes.isEmpty) {
-                ref.read(canvasProvider.notifier).resetViewport();
-                return;
-              }
-              final bounds = shapes.map((s) => s.rotatedBoundingBox).reduce(
-                (a, b) => a.expandToInclude(b),
-              );
-              ref.read(canvasProvider.notifier).zoomToFit(
-                MediaQuery.of(context).size,
-                bounds,
-              );
-            },
-          ),
-          Container(height: 24, width: 1, color: Colors.grey.shade400),
-          const SizedBox(width: 8),
-          _IconButton(
-            icon: canvasState.showGrid ? Icons.grid_on : Icons.grid_off,
-            tooltip: 'Toggle Grid (Ctrl+Shift+G)',
-            enabled: true,
-            onTap: () => ref.read(canvasProvider.notifier).toggleGrid(),
-          ),
-          const SizedBox(width: 4),
-          IconButton(
-            icon: Icon(Icons.more_vert, color: fgColor, size: 20),
-            tooltip: 'More',
-            onPressed: () => _showMoreMenu(context, ref),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          if (screenWidth > 360) ...[
+            SizedBox(width: isMobile ? 2 : 4),
+            Text(
+              'Rynex Draw',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 14 : 16),
+            ),
+          ],
+          SizedBox(width: spacing),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                children: [
+                  _IconButton(
+                    icon: Icons.undo,
+                    tooltip: 'Undo (Ctrl+Z)',
+                    enabled: canUndo,
+                    onTap: () => ref.read(historyProvider.notifier).undo(),
+                    iconSize: iconSize,
+                    buttonSize: buttonSize,
+                  ),
+                  _IconButton(
+                    icon: Icons.redo,
+                    tooltip: 'Redo (Ctrl+Y)',
+                    enabled: canRedo,
+                    onTap: () => ref.read(historyProvider.notifier).redo(),
+                    iconSize: iconSize,
+                    buttonSize: buttonSize,
+                  ),
+                  SizedBox(width: spacing + (isMobile ? 2 : 4)),
+                  Container(height: 24, width: 1, color: Colors.grey.shade400),
+                  SizedBox(width: spacing + (isMobile ? 2 : 4)),
+                  _IconButton(
+                    icon: Icons.zoom_out,
+                    tooltip: 'Zoom Out',
+                    enabled: true,
+                    onTap: () => ref.read(canvasProvider.notifier).zoomOut(Offset.zero),
+                    iconSize: iconSize,
+                    buttonSize: buttonSize,
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: spacing),
+                    child: Text(
+                      '${(canvasState.transform.zoom * 100).round()}%',
+                      style: TextStyle(fontSize: isMobile ? 12 : 13, color: fgColor),
+                    ),
+                  ),
+                  _IconButton(
+                    icon: Icons.zoom_in,
+                    tooltip: 'Zoom In',
+                    enabled: true,
+                    onTap: () => ref.read(canvasProvider.notifier).zoomIn(Offset.zero),
+                    iconSize: iconSize,
+                    buttonSize: buttonSize,
+                  ),
+                  _IconButton(
+                    icon: Icons.fit_screen,
+                    tooltip: 'Zoom to Fit',
+                    enabled: true,
+                    onTap: () {
+                      final shapes = ref.read(shapeListProvider);
+                      if (shapes.isEmpty) {
+                        ref.read(canvasProvider.notifier).resetViewport();
+                        return;
+                      }
+                      final bounds = shapes.map((s) => s.rotatedBoundingBox).reduce(
+                        (a, b) => a.expandToInclude(b),
+                      );
+                      ref.read(canvasProvider.notifier).zoomToFit(
+                        MediaQuery.of(context).size,
+                        bounds,
+                      );
+                    },
+                    iconSize: iconSize,
+                    buttonSize: buttonSize,
+                  ),
+                  SizedBox(width: spacing + (isMobile ? 2 : 4)),
+                  Container(height: 24, width: 1, color: Colors.grey.shade400),
+                  SizedBox(width: spacing + (isMobile ? 2 : 4)),
+                  _IconButton(
+                    icon: canvasState.showGrid ? Icons.grid_on : Icons.grid_off,
+                    tooltip: 'Toggle Grid (Ctrl+Shift+G)',
+                    enabled: true,
+                    onTap: () => ref.read(canvasProvider.notifier).toggleGrid(),
+                    iconSize: iconSize,
+                    buttonSize: buttonSize,
+                  ),
+                  SizedBox(width: spacing),
+                  IconButton(
+                    icon: Icon(Icons.more_vert, color: fgColor, size: 20),
+                    tooltip: 'More',
+                    onPressed: () => _showMoreMenu(context, ref),
+                    padding: EdgeInsets.zero,
+                    constraints: BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -147,12 +188,16 @@ class _IconButton extends StatelessWidget {
   final String tooltip;
   final bool enabled;
   final VoidCallback onTap;
+  final double iconSize;
+  final double buttonSize;
 
   const _IconButton({
     required this.icon,
     required this.tooltip,
     required this.enabled,
     required this.onTap,
+    this.iconSize = 20,
+    this.buttonSize = 40,
   });
 
   @override
@@ -160,10 +205,10 @@ class _IconButton extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: IconButton(
-        icon: Icon(icon, size: 20),
+        icon: Icon(icon, size: iconSize),
         onPressed: enabled ? onTap : null,
         padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+        constraints: BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
       ),
     );
   }

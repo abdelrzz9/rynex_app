@@ -12,8 +12,13 @@ class LayerPanel extends ConsumerWidget {
     final activeId = ref.watch(activeLayerIdProvider);
     final theme = Theme.of(context);
 
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final panelWidth = screenWidth < 1024
+        ? 180.0
+        : (screenWidth * 0.15).clamp(180.0, 220.0);
+
     return Container(
-      width: 220,
+      width: panelWidth,
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         border: Border(left: BorderSide(color: theme.dividerColor)),

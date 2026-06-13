@@ -32,17 +32,20 @@ class _CanvasEditorPageState extends ConsumerState<CanvasEditorPage> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+    final screenWidth = MediaQuery.sizeOf(context).width;
     final isMobile = screenWidth < 600;
+    final isTablet = screenWidth >= 600 && screenWidth < 1200;
+    final showSidePanels = screenWidth >= 1200;
 
     return Scaffold(
       body: Column(
         children: [
           const TopToolbar(),
+          const SizedBox(height: 8),
           Expanded(
             child: isMobile
                 ? _buildMobileLayout(context, ref)
-                : _buildDesktopLayout(context, ref),
+                : _buildDesktopLayout(context, ref, isTablet, showSidePanels),
           ),
         ],
       ),
@@ -64,11 +67,13 @@ class _CanvasEditorPageState extends ConsumerState<CanvasEditorPage> {
     );
   }
 
-  Widget _buildDesktopLayout(BuildContext context, WidgetRef ref) {
-    return const Row(
+  Widget _buildDesktopLayout(
+      BuildContext context, WidgetRef ref, bool isTablet, bool showSidePanels) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        DrawingToolbar(),
-        Expanded(
+        const DrawingToolbar(),
+        const Expanded(
           child: Stack(
             children: [
               CanvasGestureHandler(
@@ -77,14 +82,20 @@ class _CanvasEditorPageState extends ConsumerState<CanvasEditorPage> {
             ],
           ),
         ),
-        PropertiesPanel(),
-        LayerPanel(),
+        if (showSidePanels) ...[
+          const PropertiesPanel(),
+          const LayerPanel(),
+        ],
       ],
     );
   }
 
   Widget _buildMiniToolbar(BuildContext context, WidgetRef ref) {
     final activeTool = ref.watch(activeToolProvider);
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final iconSize = screenWidth < 360 ? 18.0 : 20.0;
+    const buttonSize = 48.0;
+
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
@@ -98,14 +109,13 @@ class _CanvasEditorPageState extends ConsumerState<CanvasEditorPage> {
         ],
       ),
       child: Wrap(
-        spacing: 2,
-        runSpacing: 2,
         children: DrawingTool.values.map((tool) {
           return InkWell(
             onTap: () => ref.read(activeToolProvider.notifier).state = tool,
+            borderRadius: BorderRadius.circular(4),
             child: Container(
-              width: 40,
-              height: 40,
+              width: buttonSize,
+              height: buttonSize,
               decoration: BoxDecoration(
                 color: activeTool == tool
                     ? Theme.of(context).colorScheme.primaryContainer
@@ -114,7 +124,7 @@ class _CanvasEditorPageState extends ConsumerState<CanvasEditorPage> {
               ),
               child: Icon(
                 _toolIcon(tool),
-                size: 20,
+                size: iconSize,
                 color: activeTool == tool
                     ? Theme.of(context).colorScheme.primary
                     : null,
