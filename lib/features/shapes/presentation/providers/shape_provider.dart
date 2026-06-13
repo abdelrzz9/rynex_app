@@ -18,6 +18,11 @@ class ShapeListNotifier extends StateNotifier<List<ShapeEntity>> {
     state = state.where((s) => s.id != id).toList();
   }
 
+  void removeShapes(List<String> ids) {
+    final idSet = ids.toSet();
+    state = state.where((s) => !idSet.contains(s.id)).toList();
+  }
+
   void updateShape(String id, ShapeEntity updated) {
     state = state.map((s) => s.id == id ? updated : s).toList();
   }

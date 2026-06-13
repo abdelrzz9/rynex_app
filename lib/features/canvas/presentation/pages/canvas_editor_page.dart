@@ -6,6 +6,7 @@ import '../widgets/canvas_gesture_handler.dart';
 import '../../../shapes/presentation/widgets/drawing_toolbar.dart';
 import '../../../shapes/presentation/widgets/properties_panel.dart';
 import '../../../shapes/presentation/providers/active_tool_provider.dart';
+import '../../../layers/presentation/widgets/layer_panel.dart';
 import '../../../../core/constants/tool_constants.dart';
 
 class CanvasEditorPage extends ConsumerWidget {
@@ -59,6 +60,7 @@ class CanvasEditorPage extends ConsumerWidget {
           ),
         ),
         const PropertiesPanel(),
+        const LayerPanel(),
       ],
     );
   }
