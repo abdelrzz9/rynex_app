@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'shape.dart';
 import 'shape_entity.dart';
 import 'shape_type.dart';
-import 'shape.dart';
 
 class ImageShape extends ShapeEntity {
   final Uint8List imageBytes;

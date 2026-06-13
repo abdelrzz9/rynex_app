@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/canvas_provider.dart';
-import '../providers/canvas_controller_provider.dart';
 import '../../../../core/constants/tool_constants.dart';
 import '../../../shapes/presentation/providers/active_tool_provider.dart';
-import 'infinite_canvas.dart';
+import '../providers/canvas_controller_provider.dart';
+import '../providers/canvas_provider.dart';
 import 'canvas_gesture_handler.dart';
+import 'infinite_canvas.dart';
 
 class CanvasViewport extends ConsumerStatefulWidget {
   const CanvasViewport({super.key});
@@ -44,16 +44,14 @@ class _CanvasViewportState extends ConsumerState<CanvasViewport> {
           transformationController: controller.transformationController,
           minScale: 0.1,
           maxScale: 10.0,
-          panEnabled: true,
-          scaleEnabled: true,
           boundaryMargin: const EdgeInsets.all(double.infinity),
           constrained: false,
           child: SizedBox(
             width: constraints.maxWidth,
             height: constraints.maxHeight,
             child: CanvasGestureHandler(
-              child: const InfiniteCanvas(),
               drawingEnabled: isDrawing,
+              child: const InfiniteCanvas(),
             ),
           ),
         );

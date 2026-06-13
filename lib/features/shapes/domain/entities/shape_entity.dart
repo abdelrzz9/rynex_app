@@ -1,6 +1,6 @@
 import 'dart:math';
-import 'package:flutter/material.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter/material.dart';
 import 'shape.dart';
 import 'shape_type.dart';
 

@@ -1,14 +1,14 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../domain/entities/project.dart';
-import '../../../shapes/domain/entities/shape_entity.dart';
-import '../../../../core/services/project_storage_service.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/services/project_storage_service.dart';
+import '../../../shapes/domain/entities/shape_entity.dart';
+import '../../domain/entities/project.dart';
 
 final activeProjectProvider = StateNotifierProvider<ActiveProjectNotifier, Project?>(
   (ref) {
     final storage = ref.read(projectStorageServiceProvider);
-    return ActiveProjectNotifier(storage, ref);
+    return ActiveProjectNotifier(storage);
   },
 );
 
@@ -16,7 +16,7 @@ class ActiveProjectNotifier extends StateNotifier<Project?> {
   final ProjectStorageService _storage;
   Timer? _saveTimer;
 
-  ActiveProjectNotifier(this._storage, Ref ref) : super(null);
+  ActiveProjectNotifier(this._storage) : super(null);
 
   Future<void> open(Project project) async {
     state = project;
@@ -59,7 +59,7 @@ class ActiveProjectNotifier extends StateNotifier<Project?> {
     if (state == null) return;
     try {
       await _storage.saveProject(state!);
-    } catch (_) {}
+    } on Exception catch (_) {}
   }
 
   @override

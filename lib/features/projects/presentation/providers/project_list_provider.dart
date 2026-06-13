@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../domain/entities/project_summary.dart';
-import '../../../../core/services/project_storage_service.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/services/project_storage_service.dart';
+import '../../domain/entities/project_summary.dart';
 
 final projectListProvider = StateNotifierProvider<ProjectListNotifier, List<ProjectSummary>>(
   (ref) {

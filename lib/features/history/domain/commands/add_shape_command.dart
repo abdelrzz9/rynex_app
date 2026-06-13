@@ -1,6 +1,6 @@
-import 'command.dart';
 import '../../../shapes/domain/entities/shape_entity.dart';
 import '../../../shapes/domain/entities/shape_type.dart';
+import 'command.dart';
 
 class AddShapeCommand extends Command {
   final ShapeEntity shape;

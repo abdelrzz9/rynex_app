@@ -1,9 +1,9 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../../core/utils/geometry_utils.dart';
+import 'shape.dart';
 import 'shape_entity.dart';
 import 'shape_type.dart';
-import 'shape.dart';
 
 class FreehandShape extends ShapeEntity {
   final List<Offset> points;

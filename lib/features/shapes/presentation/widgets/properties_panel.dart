@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../history/presentation/providers/history_provider.dart';
+import '../../../selection/presentation/providers/selection_provider.dart';
 import '../../domain/entities/shape.dart';
 import '../../domain/entities/shape_entity.dart';
 import '../../domain/entities/shape_type.dart';
-import '../providers/active_tool_provider.dart';
-import '../providers/shape_provider.dart';
-import '../../../selection/presentation/providers/selection_provider.dart';
-import '../../../history/presentation/providers/history_provider.dart';
-import '../../domain/value_objects/stroke_style.dart';
 import '../../domain/value_objects/fill_style.dart';
 import '../../domain/value_objects/roughness.dart';
+import '../../domain/value_objects/stroke_style.dart';
+import '../providers/active_tool_provider.dart';
+import '../providers/shape_provider.dart';
 
 class PropertiesPanel extends ConsumerWidget {
   const PropertiesPanel({super.key});

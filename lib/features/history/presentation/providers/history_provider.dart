@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../domain/entities/history_state.dart';
-import '../../domain/commands/command.dart';
-import '../../domain/commands/add_shape_command.dart';
-import '../../domain/commands/remove_shape_command.dart';
-import '../../domain/commands/modify_shape_command.dart';
-import '../../domain/commands/composite_command.dart';
-import '../../../shapes/presentation/providers/shape_provider.dart';
-import '../../../shapes/domain/entities/shape_entity.dart';
-import '../../../shapes/domain/entities/shape_factory.dart';
 import '../../../../core/utils/uuid_generator.dart';
 import '../../../selection/presentation/providers/selection_provider.dart';
+import '../../../shapes/domain/entities/shape_entity.dart';
+import '../../../shapes/domain/entities/shape_factory.dart';
+import '../../../shapes/presentation/providers/shape_provider.dart';
+import '../../domain/commands/add_shape_command.dart';
+import '../../domain/commands/command.dart';
+import '../../domain/commands/composite_command.dart';
+import '../../domain/commands/modify_shape_command.dart';
+import '../../domain/commands/remove_shape_command.dart';
+import '../../domain/entities/history_state.dart';
 
 final historyProvider =
     StateNotifierProvider<HistoryNotifier, HistoryState>(

@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/di/injection_container.dart';
+import '../../../../core/utils/uuid_generator.dart';
+import '../../../canvas/presentation/providers/canvas_provider.dart';
+import '../../../history/presentation/providers/history_provider.dart';
 import '../../../projects/domain/entities/project.dart';
 import '../../../projects/domain/entities/project_summary.dart';
-import '../../../projects/presentation/providers/project_list_provider.dart';
 import '../../../projects/presentation/providers/active_project_provider.dart';
-import '../../../canvas/presentation/providers/canvas_provider.dart';
-import '../../../shapes/presentation/providers/shape_provider.dart';
-import '../../../history/presentation/providers/history_provider.dart';
+import '../../../projects/presentation/providers/project_list_provider.dart';
 import '../../../selection/presentation/providers/selection_provider.dart';
-import '../../../../core/utils/uuid_generator.dart';
-import '../../../../core/di/injection_container.dart';
+import '../../../shapes/presentation/providers/shape_provider.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -105,7 +105,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         Expanded(
           child: ListView.separated(
             itemCount: projects.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final project = projects[index];
               return _buildProjectTile(project, theme);
@@ -145,7 +145,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  void _createNewProject() async {
+  Future<void> _createNewProject() async {
     final id = UuidGenerator.generate();
     final now = DateTime.now();
     final project = Project(id: id, name: 'Untitled', createdAt: now, updatedAt: now);
@@ -155,10 +155,11 @@ class _HomePageState extends ConsumerState<HomePage> {
     ref.read(selectionProvider.notifier).deselectAll();
     ref.read(canvasProvider.notifier).resetViewport();
     await ref.read(activeProjectProvider.notifier).open(project);
-    if (context.mounted) context.goNamed('editor');
+    if (!mounted) return;
+    context.goNamed('editor');
   }
 
-  void _openProject(String id) async {
+  Future<void> _openProject(String id) async {
     ref.read(shapeListProvider.notifier).clearAll();
     ref.read(historyProvider.notifier).clear();
     ref.read(selectionProvider.notifier).deselectAll();
@@ -166,7 +167,8 @@ class _HomePageState extends ConsumerState<HomePage> {
     final project = ref.read(activeProjectProvider);
     if (project != null) {
       await ref.read(projectStorageServiceProvider).saveProject(project);
-      if (context.mounted) context.goNamed('editor');
+      if (!mounted) return;
+      context.goNamed('editor');
     }
   }
 

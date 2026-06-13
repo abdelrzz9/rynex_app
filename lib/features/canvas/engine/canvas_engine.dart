@@ -1,24 +1,24 @@
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import '../../shapes/domain/entities/shape_entity.dart';
-import '../../shapes/domain/entities/rectangle_shape.dart';
-import '../../shapes/domain/entities/ellipse_shape.dart';
-import '../../shapes/domain/entities/diamond_shape.dart';
-import '../../shapes/domain/entities/triangle_shape.dart';
-import '../../shapes/domain/entities/line_shape.dart';
-import '../../shapes/domain/entities/arrow_shape.dart';
-import '../../shapes/domain/entities/freehand_shape.dart';
-import '../../shapes/domain/entities/text_shape.dart';
-import '../../shapes/domain/entities/image_shape.dart';
-import '../../shapes/domain/entities/shape.dart';
-import '../../shapes/domain/entities/shape_type.dart';
-import '../../shapes/domain/value_objects/roughness.dart';
-import '../../shapes/domain/value_objects/fill_style.dart';
-import '../../shapes/domain/value_objects/stroke_style.dart';
-import '../../selection/domain/entities/selection_state.dart';
-import '../domain/entities/canvas_transform.dart';
 import '../../../core/constants/canvas_constants.dart';
+import '../../selection/domain/entities/selection_state.dart';
+import '../../shapes/domain/entities/arrow_shape.dart';
+import '../../shapes/domain/entities/diamond_shape.dart';
+import '../../shapes/domain/entities/ellipse_shape.dart';
+import '../../shapes/domain/entities/freehand_shape.dart';
+import '../../shapes/domain/entities/image_shape.dart';
+import '../../shapes/domain/entities/line_shape.dart';
+import '../../shapes/domain/entities/rectangle_shape.dart';
+import '../../shapes/domain/entities/shape.dart';
+import '../../shapes/domain/entities/shape_entity.dart';
+import '../../shapes/domain/entities/shape_type.dart';
+import '../../shapes/domain/entities/text_shape.dart';
+import '../../shapes/domain/entities/triangle_shape.dart';
+import '../../shapes/domain/value_objects/fill_style.dart';
+import '../../shapes/domain/value_objects/roughness.dart';
+import '../../shapes/domain/value_objects/stroke_style.dart';
+import '../domain/entities/canvas_transform.dart';
 import 'picture_recorder_manager.dart';
 
 class CanvasEngine extends CustomPainter {
@@ -537,7 +537,7 @@ class CanvasEngine extends CustomPainter {
           ..color = const Color(0xFF4A90D9)
           ..strokeWidth = 1.5
           ..style = PaintingStyle.stroke;
-        final handleSize = CanvasConstants.handleSize;
+        const handleSize = CanvasConstants.handleSize;
 
         final handles = [
           screenRect.topLeft,

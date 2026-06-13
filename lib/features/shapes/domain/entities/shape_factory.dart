@@ -1,19 +1,19 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'shape_entity.dart';
-import 'rectangle_shape.dart';
-import 'ellipse_shape.dart';
-import 'diamond_shape.dart';
-import 'triangle_shape.dart';
-import 'line_shape.dart';
-import 'arrow_shape.dart';
-import 'freehand_shape.dart';
-import 'text_shape.dart';
-import 'image_shape.dart';
-import 'shape.dart';
-import '../value_objects/stroke_style.dart';
 import '../value_objects/fill_style.dart';
 import '../value_objects/roughness.dart';
+import '../value_objects/stroke_style.dart';
+import 'arrow_shape.dart';
+import 'diamond_shape.dart';
+import 'ellipse_shape.dart';
+import 'freehand_shape.dart';
+import 'image_shape.dart';
+import 'line_shape.dart';
+import 'rectangle_shape.dart';
+import 'shape.dart';
+import 'shape_entity.dart';
+import 'text_shape.dart';
+import 'triangle_shape.dart';
 
 class ShapeFactory {
   static ShapeEntity fromJson(Map<String, dynamic> json) {
@@ -225,9 +225,10 @@ class ShapeFactory {
 
   static FreehandShape _parseFreehand(Map<String, dynamic> json) {
     final points = (json['points'] as List).map((p) {
+      final pt = p as Map<String, dynamic>;
       return Offset(
-        (p['x'] as num).toDouble(),
-        (p['y'] as num).toDouble(),
+        (pt['x'] as num).toDouble(),
+        (pt['y'] as num).toDouble(),
       );
     }).toList();
     return FreehandShape(
@@ -256,7 +257,7 @@ class ShapeFactory {
       fontFamily: json['fontFamily'] as String? ?? 'Roboto',
       fontSize: (json['fontSize'] as num?)?.toDouble() ?? 20.0,
       fontWeight: FontWeight.values.firstWhere(
-        (w) => w.index == (json['fontWeight'] as num?)?.toInt(),
+        (w) => w.value == (json['fontWeight'] as num?)?.toInt(),
         orElse: () => FontWeight.normal,
       ),
       textAlign: TextAlign.values.firstWhere(

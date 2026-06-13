@@ -1,8 +1,8 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../shapes/presentation/providers/shape_provider.dart';
-import '../../../selection/presentation/providers/selection_provider.dart';
 import '../../../history/presentation/providers/history_provider.dart';
+import '../../../selection/presentation/providers/selection_provider.dart';
+import '../../../shapes/presentation/providers/shape_provider.dart';
 import 'canvas_provider.dart';
 
 final keyboardHandlerProvider = Provider<KeyboardHandler>((ref) {

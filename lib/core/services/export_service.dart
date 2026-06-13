@@ -20,7 +20,7 @@ class ExportService {
     final file = File('${dir.path}/rynex_export_$timestamp.png');
     await file.writeAsBytes(byteData.buffer.asUint8List());
 
-    _shareFile(file);
+    await _shareFile(file);
   }
 
   Future<void> exportJson(List<ShapeEntity> shapes) async {
@@ -35,7 +35,7 @@ class ExportService {
     final file = File('${dir.path}/rynex_export_$timestamp.rynex');
     await file.writeAsString(const JsonEncoder.withIndent('  ').convert(data));
 
-    _shareFile(file);
+    await _shareFile(file);
   }
 
   Future<void> _shareFile(File file) async {
@@ -46,7 +46,7 @@ class ExportService {
       if (await downloads.exists()) {
         await file.copy('${downloads.path}/${file.path.split('/').last}');
       }
-    } catch (_) {}
+    } on Exception catch (_) {}
 
     // Print path for debugging
     debugPrint('Exported to: ${file.path}');

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'shape.dart';
 import 'shape_entity.dart';
 import 'shape_type.dart';
-import 'shape.dart';
 
 class RectangleShape extends ShapeEntity {
   final double cornerRadius;

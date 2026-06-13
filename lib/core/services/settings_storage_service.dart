@@ -1,13 +1,13 @@
-import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import '../../features/settings/domain/entities/app_settings.dart';
 import '../../core/constants/tool_constants.dart';
+import '../../features/settings/domain/entities/app_settings.dart';
 import '../../features/shapes/domain/entities/shape.dart';
-import '../../features/shapes/domain/value_objects/stroke_style.dart';
 import '../../features/shapes/domain/value_objects/fill_style.dart';
 import '../../features/shapes/domain/value_objects/roughness.dart';
+import '../../features/shapes/domain/value_objects/stroke_style.dart';
 
 class SettingsStorageService {
   File? _file;
@@ -60,7 +60,7 @@ class SettingsStorageService {
         showGrid: data['showGrid'] as bool? ?? true,
         snapToGrid: data['snapToGrid'] as bool? ?? false,
       );
-    } catch (_) {
+    } on Exception catch (_) {
       return const AppSettings();
     }
   }

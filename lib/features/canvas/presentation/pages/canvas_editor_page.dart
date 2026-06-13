@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../widgets/infinite_canvas.dart';
-import '../widgets/top_toolbar.dart';
-import '../widgets/canvas_gesture_handler.dart';
-import '../../../shapes/presentation/widgets/drawing_toolbar.dart';
-import '../../../shapes/presentation/widgets/properties_panel.dart';
-import '../../../shapes/presentation/providers/active_tool_provider.dart';
-import '../../../shapes/presentation/providers/shape_provider.dart';
+import '../../../../core/constants/tool_constants.dart';
 import '../../../layers/presentation/widgets/layer_panel.dart';
 import '../../../projects/presentation/providers/active_project_provider.dart';
-import '../../../../core/constants/tool_constants.dart';
+import '../../../shapes/presentation/providers/active_tool_provider.dart';
+import '../../../shapes/presentation/providers/shape_provider.dart';
+import '../../../shapes/presentation/widgets/drawing_toolbar.dart';
+import '../../../shapes/presentation/widgets/properties_panel.dart';
+import '../widgets/canvas_gesture_handler.dart';
+import '../widgets/infinite_canvas.dart';
+import '../widgets/top_toolbar.dart';
 
 class CanvasEditorPage extends ConsumerStatefulWidget {
   const CanvasEditorPage({super.key});
@@ -25,7 +25,7 @@ class _CanvasEditorPageState extends ConsumerState<CanvasEditorPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final project = ref.read(activeProjectProvider);
       if (project != null && project.shapes.isNotEmpty) {
-        ref.read(shapeListProvider.notifier).loadShapes(project.shapes);
+        ref.read(shapeListProvider.notifier).shapes = project.shapes;
       }
     });
   }
@@ -65,20 +65,20 @@ class _CanvasEditorPageState extends ConsumerState<CanvasEditorPage> {
   }
 
   Widget _buildDesktopLayout(BuildContext context, WidgetRef ref) {
-    return Row(
+    return const Row(
       children: [
-        const DrawingToolbar(),
+        DrawingToolbar(),
         Expanded(
           child: Stack(
             children: [
-              const CanvasGestureHandler(
+              CanvasGestureHandler(
                 child: InfiniteCanvas(),
               ),
             ],
           ),
         ),
-        const PropertiesPanel(),
-        const LayerPanel(),
+        PropertiesPanel(),
+        LayerPanel(),
       ],
     );
   }

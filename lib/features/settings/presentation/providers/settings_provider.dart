@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../domain/entities/app_settings.dart';
 import '../../../../core/constants/tool_constants.dart';
-import '../../../shapes/domain/entities/shape.dart';
-import '../../../../core/services/settings_storage_service.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/services/settings_storage_service.dart';
+import '../../../shapes/domain/entities/shape.dart';
+import '../../domain/entities/app_settings.dart';
 
 final settingsProvider = StateNotifierProvider<SettingsNotifier, AppSettings>(
   (ref) {
@@ -56,13 +56,13 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     _save();
   }
 
-  void load(AppSettings settings) {
-    state = settings;
+  set settings(AppSettings value) {
+    state = value;
   }
 
   Future<void> _save() async {
     try {
       await _storage.save(state);
-    } catch (_) {}
+    } on Exception catch (_) {}
   }
 }

@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:equatable/equatable.dart';
-import '../value_objects/stroke_style.dart';
+import 'package:flutter/material.dart';
 import '../value_objects/fill_style.dart';
 import '../value_objects/roughness.dart';
+import '../value_objects/stroke_style.dart';
 
 class ShapeStyle extends Equatable {
   final Color strokeColor;

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'shape.dart';
 import 'shape_entity.dart';
 import 'shape_type.dart';
-import 'shape.dart';
 
 class TextShape extends ShapeEntity {
   final String text;
@@ -38,7 +38,7 @@ class TextShape extends ShapeEntity {
         'text': text,
         'fontFamily': fontFamily,
         'fontSize': fontSize,
-        'fontWeight': fontWeight.index,
+        'fontWeight': fontWeight.value,
         'textAlign': textAlign.name,
         'strokeColor': style.strokeColor.toARGB32(),
         'opacity': style.opacity,

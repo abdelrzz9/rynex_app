@@ -39,7 +39,7 @@ class LayerPanel extends ConsumerWidget {
           Expanded(
             child: ReorderableListView.builder(
               itemCount: layers.length,
-              onReorder: (old, next) => ref.read(layerListProvider.notifier).reorder(old, next),
+              onReorderItem: (old, next) => ref.read(layerListProvider.notifier).reorder(old, next),
               itemBuilder: (context, index) {
                 final layer = layers[index];
                 return _LayerTile(key: ValueKey(layer.id), layer: layer);

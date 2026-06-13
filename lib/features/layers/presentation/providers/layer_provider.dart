@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../domain/entities/layer.dart';
 import '../../../shapes/domain/entities/shape_entity.dart';
 import '../../../shapes/presentation/providers/shape_provider.dart';
+import '../../domain/entities/layer.dart';
 
 final layerListProvider = StateNotifierProvider<LayerListNotifier, List<LayerEntity>>(
   (ref) => LayerListNotifier(ref),
@@ -10,7 +10,7 @@ final layerListProvider = StateNotifierProvider<LayerListNotifier, List<LayerEnt
 class LayerListNotifier extends StateNotifier<List<LayerEntity>> {
   final Ref _ref;
 
-  LayerListNotifier(this._ref) : super([LayerEntity(id: 0, name: 'Layer 1', order: 0)]);
+  LayerListNotifier(this._ref) : super([const LayerEntity(id: 0, name: 'Layer 1', order: 0)]);
 
   void addLayer(String name) {
     final order = state.isEmpty ? 0 : state.map((l) => l.order).reduce((a, b) => a > b ? a : b) + 1;

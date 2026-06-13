@@ -1,5 +1,5 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:collection/collection.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/shape_entity.dart';
 
 final shapeListProvider =
@@ -93,8 +93,8 @@ class ShapeListNotifier extends StateNotifier<List<ShapeEntity>> {
     state = [];
   }
 
-  void loadShapes(List<ShapeEntity> shapes) {
-    state = shapes;
+  set shapes(List<ShapeEntity> value) {
+    state = value;
   }
 
   List<ShapeEntity> get sortedByLayer {

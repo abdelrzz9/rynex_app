@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/tool_constants.dart';
 import '../../domain/entities/shape.dart';
-import '../../domain/value_objects/stroke_style.dart';
 import '../../domain/value_objects/fill_style.dart';
 import '../../domain/value_objects/roughness.dart';
+import '../../domain/value_objects/stroke_style.dart';
 
 final activeToolProvider = StateProvider<DrawingTool>((ref) {
   return DrawingTool.select;

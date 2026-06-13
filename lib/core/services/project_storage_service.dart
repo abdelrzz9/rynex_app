@@ -1,9 +1,9 @@
-import '../../features/shapes/domain/entities/shape_factory.dart';
-import '../../features/projects/domain/entities/project.dart';
-import '../../features/projects/domain/entities/project_summary.dart';
-import 'package:path_provider/path_provider.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import '../../features/projects/domain/entities/project.dart';
+import '../../features/projects/domain/entities/project_summary.dart';
+import '../../features/shapes/domain/entities/shape_factory.dart';
 
 class ProjectStorageService {
   Directory? _baseDir;
@@ -18,7 +18,7 @@ class ProjectStorageService {
     return _baseDir!;
   }
 
-  String _filePath(String projectId) => '${projectId}.json';
+  String _filePath(String projectId) => '$projectId.json';
 
   Future<void> saveProject(Project project) async {
     final dir = await _getDir();
@@ -66,7 +66,7 @@ class ProjectStorageService {
           thumbnailPath: data['thumbnailPath'] as String?,
           shapeCount: (data['shapes'] as List).length,
         ));
-      } catch (_) {}
+      } on Exception catch (_) {}
     }
     summaries.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return summaries;

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../selection/presentation/providers/selection_provider.dart';
 import '../../../shapes/domain/entities/shape_entity.dart';
+import '../../../shapes/presentation/providers/shape_provider.dart';
 import '../../engine/canvas_engine.dart';
 import '../../engine/picture_recorder_manager.dart';
 import '../../presentation/providers/canvas_provider.dart';
-import '../../../shapes/presentation/providers/shape_provider.dart';
-import '../../../selection/presentation/providers/selection_provider.dart';
 
 class InfiniteCanvas extends ConsumerStatefulWidget {
   const InfiniteCanvas({super.key});
