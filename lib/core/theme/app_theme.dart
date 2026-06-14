@@ -3,37 +3,42 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  // Dark theme colors
-  static const Color darkBg = Color(0xFF121212);
-  static const Color darkSurface = Color(0xFF1A1A1A);
-  static const Color darkCard = Color(0xFF222222);
-  static const Color darkBorder = Color(0xFF2D2D2D);
-  static const Color darkHover = Color(0xFF303030);
-  static const Color darkSelected = Color(0xFF3A3A3A);
+  // Design spec colors
+  static const Color primaryPurple = Color(0xFF6C4DD3);
+  static const Color primaryPurpleLight = Color(0xFFEDE5FF);
+  static const Color primaryPurpleDark = Color(0xFF8E72FF);
 
-  // Light theme colors
-  static const Color lightBg = Color(0xFFF5F5F5);
+  // Light theme
+  static const Color lightBg = Color(0xFFF8F8FA);
   static const Color lightSurface = Color(0xFFFFFFFF);
-  static const Color lightCard = Color(0xFFF0F0F0);
-  static const Color lightBorder = Color(0xFFE0E0E0);
+  static const Color lightCard = Color(0xFFFFFFFF);
+  static const Color lightBorder = Color(0xFFE5E5E5);
+  static const Color lightTextPrimary = Color(0xFF111111);
+  static const Color lightTextSecondary = Color(0xFF666666);
+
+  // Dark theme
+  static const Color darkBg = Color(0xFF121212);
+  static const Color darkSurface = Color(0xFF1E1E24);
+  static const Color darkCard = Color(0xFF23232D);
+  static const Color darkBorder = Color(0xFF2E2E38);
+  static const Color darkTextPrimary = Color(0xFFFFFFFF);
+  static const Color darkTextSecondary = Color(0xFFB0B0B0);
+
+  // Legacy aliases for compatibility
   static const Color lightHover = Color(0xFFE8E8E8);
   static const Color lightSelected = Color(0xFFD0D0D0);
-
-  // Text
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFFBDBDBD);
+  static const Color darkHover = Color(0xFF303030);
+  static const Color darkSelected = Color(0xFF3A3A3A);
+  static const Color textPrimary = darkTextPrimary;
+  static const Color textSecondary = darkTextSecondary;
   static const Color textDisabled = Color(0xFF757575);
-  static const Color textPrimaryLight = Color(0xFF212121);
-  static const Color textSecondaryLight = Color(0xFF757575);
-
-  // Accent (Dark mode - Blue)
+  static const Color textPrimaryLight = lightTextPrimary;
+  static const Color textSecondaryLight = lightTextSecondary;
   static const Color accent = Color(0xFF3B82F6);
   static const Color accentLight = Color(0xFF60A5FA);
   static const Color accentDark = Color(0xFF2563EB);
-
-  // Accent (Light mode - Violet)
-  static const Color accentViolet = Color(0xFF7C3AED);
-  static const Color accentVioletLight = Color(0xFFA78BFA);
+  static const Color accentViolet = primaryPurple;
+  static const Color accentVioletLight = primaryPurpleLight;
   static const Color accentVioletDark = Color(0xFF5B21B6);
 }
 
@@ -46,11 +51,11 @@ class AppTheme {
       brightness: Brightness.light,
       scaffoldBackgroundColor: AppColors.lightBg,
       colorScheme: ColorScheme.light(
-        primary: AppColors.accentViolet,
+        primary: AppColors.primaryPurple,
         onPrimary: Colors.white,
-        secondary: AppColors.accentVioletLight,
+        secondary: AppColors.primaryPurpleLight,
         surface: AppColors.lightSurface,
-        onSurface: AppColors.textPrimaryLight,
+        onSurface: AppColors.lightTextPrimary,
         outline: AppColors.lightBorder,
       ),
       cardColor: AppColors.lightCard,
@@ -60,16 +65,16 @@ class AppTheme {
         elevation: 0,
         centerTitle: true,
         backgroundColor: AppColors.lightSurface,
-        foregroundColor: AppColors.textPrimaryLight,
+        foregroundColor: AppColors.lightTextPrimary,
       ),
       iconTheme: const IconThemeData(
-        color: AppColors.textPrimaryLight,
+        color: AppColors.lightTextPrimary,
       ),
       textTheme: const TextTheme(
-        headlineMedium: TextStyle(color: AppColors.textPrimaryLight),
-        titleSmall: TextStyle(color: AppColors.textSecondaryLight),
-        bodyMedium: TextStyle(color: AppColors.textPrimaryLight),
-        bodySmall: TextStyle(color: AppColors.textSecondaryLight),
+        headlineMedium: TextStyle(color: AppColors.lightTextPrimary),
+        titleSmall: TextStyle(color: AppColors.lightTextSecondary),
+        bodyMedium: TextStyle(color: AppColors.lightTextPrimary),
+        bodySmall: TextStyle(color: AppColors.lightTextSecondary),
       ),
     );
   }
@@ -80,11 +85,11 @@ class AppTheme {
       brightness: Brightness.dark,
       scaffoldBackgroundColor: AppColors.darkBg,
       colorScheme: ColorScheme.dark(
-        primary: AppColors.accent,
+        primary: AppColors.primaryPurpleDark,
         onPrimary: Colors.white,
-        secondary: AppColors.accentLight,
+        secondary: AppColors.primaryPurpleLight,
         surface: AppColors.darkSurface,
-        onSurface: AppColors.textPrimary,
+        onSurface: AppColors.darkTextPrimary,
         outline: AppColors.darkBorder,
       ),
       cardColor: AppColors.darkCard,
@@ -94,16 +99,16 @@ class AppTheme {
         elevation: 0,
         centerTitle: true,
         backgroundColor: AppColors.darkSurface,
-        foregroundColor: AppColors.textPrimary,
+        foregroundColor: AppColors.darkTextPrimary,
       ),
       iconTheme: const IconThemeData(
-        color: AppColors.textPrimary,
+        color: AppColors.darkTextPrimary,
       ),
       textTheme: const TextTheme(
-        headlineMedium: TextStyle(color: AppColors.textPrimary),
-        titleSmall: TextStyle(color: AppColors.textSecondary),
-        bodyMedium: TextStyle(color: AppColors.textPrimary),
-        bodySmall: TextStyle(color: AppColors.textSecondary),
+        headlineMedium: TextStyle(color: AppColors.darkTextPrimary),
+        titleSmall: TextStyle(color: AppColors.darkTextSecondary),
+        bodyMedium: TextStyle(color: AppColors.darkTextPrimary),
+        bodySmall: TextStyle(color: AppColors.darkTextSecondary),
       ),
     );
   }

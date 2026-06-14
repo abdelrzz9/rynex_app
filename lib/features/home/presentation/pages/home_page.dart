@@ -33,130 +33,55 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   Widget build(BuildContext context) {
     final projects = ref.watch(projectListProvider);
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final isTablet = screenWidth >= 600;
-    final crossAxisCount = isTablet ? (screenWidth ~/ 280).clamp(2, 4) : 1;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final bg = isDark ? AppColors.darkBg : AppColors.lightBg;
+    final surface = isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final primary = isDark ? AppColors.primaryPurpleDark : AppColors.primaryPurple;
+    final primaryLight = AppColors.primaryPurpleLight;
+    final textPrimary = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+    final textSecondary = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+      backgroundColor: bg,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(24, screenWidth > 360 ? 48 : 24, 24, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'My Projects',
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? AppColors.textPrimary : AppColors.textPrimaryLight,
+        child: Column(
+          children: [
+            _SettingsButton(primary: primary, border: border, onTap: () => _showSettingsDialog(context)),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) => SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: IntrinsicHeight(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Spacer(flex: 2),
+                          _LogoSection(primary: primary),
+                          const SizedBox(height: 32),
+                          _NewProjectButton(primary: primary, onTap: _createNewProject),
+                          const SizedBox(height: 32),
+                          _RecentProjectsSection(
+                            projects: projects,
+                            primary: primary,
+                            primaryLight: primaryLight,
+                            textPrimary: textPrimary,
+                            textSecondary: textSecondary,
+                            border: border,
+                            surface: surface,
+                            onOpen: _openProject,
+                          ),
+                          const Spacer(flex: 3),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Create, edit, and manage your drawings',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLight,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        _ActionButton(
-                          icon: Icons.add,
-                          label: 'New Project',
-                          onTap: _createNewProject,
-                          isDark: isDark,
-                        ),
-                        const SizedBox(width: 12),
-                        _ActionButton(
-                          icon: Icons.folder_open,
-                          label: 'Import',
-                          onTap: () {},
-                          isDark: isDark,
-                        ),
-                        const SizedBox(width: 12),
-                        _ActionButton(
-                          icon: Icons.settings,
-                          label: 'Settings',
-                          onTap: () => _showSettingsDialog(context),
-                          isDark: isDark,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                  ],
+                  ),
                 ),
               ),
             ),
-            if (projects.isEmpty)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.draw_outlined,
-                        size: 64,
-                        color: isDark ? AppColors.textDisabled : AppColors.textSecondaryLight,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No projects yet',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLight,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Tap "New Project" to create your first drawing',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: isDark ? AppColors.textDisabled : AppColors.textSecondaryLight,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-            else ...[
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                sliver: SliverToBoxAdapter(
-                  child: Text(
-                    'Recent Projects',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLight,
-                    ),
-                  ),
-                ),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-                sliver: SliverGrid(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: crossAxisCount,
-                    childAspectRatio: 0.85,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) => _ProjectCard(
-                      project: projects[index],
-                      isDark: isDark,
-                      onTap: () => _openProject(projects[index].id),
-                    ),
-                    childCount: projects.length,
-                  ),
-                ),
-              ),
-            ],
+            _BottomNav(primary: primary, textSecondary: textSecondary, surface: surface, border: border),
           ],
         ),
       ),
@@ -174,7 +99,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     ref.read(canvasProvider.notifier).resetViewport();
     await ref.read(activeProjectProvider.notifier).open(project);
     if (!mounted) return;
-    context.goNamed('editor');
+    context.pushNamed('editor');
   }
 
   Future<void> _openProject(String id) async {
@@ -186,7 +111,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     if (project != null) {
       await ref.read(projectStorageServiceProvider).saveProject(project);
       if (!mounted) return;
-      context.goNamed('editor');
+      context.pushNamed('editor');
     }
   }
 
@@ -231,51 +156,105 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 }
 
-class _ActionButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
+class _SettingsButton extends StatelessWidget {
+  final Color primary;
+  final Color border;
   final VoidCallback onTap;
-  final bool isDark;
 
-  const _ActionButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    required this.isDark,
-  });
+  const _SettingsButton({required this.primary, required this.border, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: isDark ? AppColors.darkCard : AppColors.lightCard,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
-            borderRadius: BorderRadius.circular(12),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: border),
+            ),
+            child: IconButton(
+              icon: Icon(Icons.settings, color: primary, size: 22),
+              onPressed: onTap,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+            ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 20,
-                color: isDark ? AppColors.textPrimary : AppColors.textPrimaryLight,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: isDark ? AppColors.textPrimary : AppColors.textPrimaryLight,
-                ),
-              ),
-            ],
+        ],
+      ),
+    );
+  }
+}
+
+class _LogoSection extends StatelessWidget {
+  final Color primary;
+
+  const _LogoSection({required this.primary});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.edit, size: 80, color: primary),
+          const SizedBox(height: 16),
+          Text(
+            'Rynex Draw',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? AppColors.darkTextPrimary
+                  : AppColors.lightTextPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Offline-first infinite canvas',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w400,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? AppColors.darkTextSecondary
+                  : AppColors.lightTextSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NewProjectButton extends StatelessWidget {
+  final Color primary;
+  final VoidCallback onTap;
+
+  const _NewProjectButton({required this.primary, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: SizedBox(
+        width: double.infinity,
+        height: 56,
+        child: ElevatedButton(
+          onPressed: onTap,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: primary,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          child: const Text(
+            '+ New Project',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
         ),
       ),
@@ -283,81 +262,141 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
+class _RecentProjectsSection extends StatelessWidget {
+  final List<ProjectSummary> projects;
+  final Color primary;
+  final Color primaryLight;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color border;
+  final Color surface;
+  final void Function(String id) onOpen;
+
+  const _RecentProjectsSection({
+    required this.projects,
+    required this.primary,
+    required this.primaryLight,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.border,
+    required this.surface,
+    required this.onOpen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (projects.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Recent Projects',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: textPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...projects.take(5).map(
+            (p) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _ProjectCard(
+                project: p,
+                primaryLight: primaryLight,
+                textPrimary: textPrimary,
+                textSecondary: textSecondary,
+                border: border,
+                surface: surface,
+                onTap: () => onOpen(p.id),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ProjectCard extends StatelessWidget {
   final ProjectSummary project;
-  final bool isDark;
+  final Color primaryLight;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color border;
+  final Color surface;
   final VoidCallback onTap;
 
   const _ProjectCard({
     required this.project,
-    required this.isDark,
+    required this.primaryLight,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.border,
+    required this.surface,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: isDark ? AppColors.darkCard : AppColors.lightCard,
-      borderRadius: BorderRadius.circular(12),
+      color: surface,
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: Container(
+          height: 90,
           decoration: BoxDecoration(
-            border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: border),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
+              Container(
+                width: 60,
+                margin: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: primaryLight,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.image_outlined, size: 28, color: Color(0xFF6C4DD3)),
+              ),
               Expanded(
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.image_outlined,
-                      size: 40,
-                      color: isDark ? AppColors.textDisabled : AppColors.textSecondaryLight,
-                    ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        project.name,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${project.shapeCount} shapes \u2022 ${_formatDate(project.updatedAt)}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      project.name,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                        color: isDark ? AppColors.textPrimary : AppColors.textPrimaryLight,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${project.shapeCount} shapes',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLight,
-                      ),
-                    ),
-                    Text(
-                      _formatDate(project.updatedAt),
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark ? AppColors.textDisabled : AppColors.textSecondaryLight,
-                      ),
-                    ),
-                  ],
-                ),
+                padding: const EdgeInsets.only(right: 16),
+                child: Icon(Icons.chevron_right, size: 22, color: textSecondary),
               ),
             ],
           ),
@@ -373,5 +412,80 @@ class _ProjectCard extends StatelessWidget {
     if (diff.inHours < 24) return '${diff.inHours}h ago';
     if (diff.inDays < 7) return '${diff.inDays}d ago';
     return '${date.month}/${date.day}/${date.year}';
+  }
+}
+
+class _BottomNav extends StatelessWidget {
+  final Color primary;
+  final Color textSecondary;
+  final Color surface;
+  final Color border;
+
+  const _BottomNav({
+    required this.primary,
+    required this.textSecondary,
+    required this.surface,
+    required this.border,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 72,
+      decoration: BoxDecoration(
+        color: surface,
+        border: Border(top: BorderSide(color: border)),
+      ),
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.home, size: 20, color: primary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Home',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.folder_outlined, size: 22, color: textSecondary),
+                const SizedBox(height: 4),
+                Text(
+                  'Projects',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

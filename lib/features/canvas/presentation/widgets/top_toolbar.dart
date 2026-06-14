@@ -56,26 +56,29 @@ class TopToolbar extends ConsumerWidget {
           ),
           if (screenWidth > 360) ...[
             const SizedBox(width: 4),
-            GestureDetector(
-              onDoubleTap: () => _showRenameDialog(context, ref, project?.name ?? ''),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: isMobile ? 100 : 200),
-                    child: Text(
-                      project?.name ?? 'Untitled Drawing',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: isMobile ? 13 : 15,
-                        color: fgColor,
+            Tooltip(
+              message: 'Double-tap to rename',
+              child: GestureDetector(
+                onDoubleTap: () => _showRenameDialog(context, ref, project?.name ?? ''),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: isMobile ? 120 : 240),
+                      child: Text(
+                        project?.name ?? 'Untitled Drawing',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: isMobile ? 13 : 15,
+                          color: fgColor,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(Icons.edit, size: 12, color: fgColor.withValues(alpha: 0.5)),
-                ],
+                    const SizedBox(width: 6),
+                    Icon(Icons.edit, size: 16, color: fgColor.withValues(alpha: 0.7)),
+                  ],
+                ),
               ),
             ),
           ],

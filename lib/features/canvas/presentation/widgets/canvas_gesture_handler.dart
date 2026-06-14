@@ -417,6 +417,7 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
       end: _drawStart,
       style: style,
       type: tool.toShapeType(),
+      points: List.from(_freehandPoints),
     );
   }
 
@@ -435,6 +436,7 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
       end: _drawCurrent,
       style: ref.read(activeStyleProvider),
       type: tool.toShapeType(),
+      points: List.from(_freehandPoints),
     );
   }
 

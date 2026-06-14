@@ -12,12 +12,14 @@ class ActiveDrawingState {
   final Offset? end;
   final ShapeStyle? style;
   final ShapeType? type;
+  final List<Offset> points;
 
   const ActiveDrawingState({
     this.start,
     this.end,
     this.style,
     this.type,
+    this.points = const [],
   });
 
   ActiveDrawingState copyWith({
@@ -25,6 +27,7 @@ class ActiveDrawingState {
     Offset? end,
     ShapeStyle? style,
     ShapeType? type,
+    List<Offset>? points,
     bool clear = false,
   }) {
     if (clear) {
@@ -35,6 +38,7 @@ class ActiveDrawingState {
       end: end ?? this.end,
       style: style ?? this.style,
       type: type ?? this.type,
+      points: points ?? this.points,
     );
   }
 }

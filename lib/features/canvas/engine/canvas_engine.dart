@@ -33,6 +33,7 @@ class CanvasEngine extends CustomPainter {
   final Offset? activeDrawingEnd;
   final ShapeStyle? activeDrawingStyle;
   final ShapeType? activeShapeType;
+  final List<Offset> activeDrawingPoints;
   final double canvasWidth;
   final double canvasHeight;
 
@@ -49,6 +50,7 @@ class CanvasEngine extends CustomPainter {
     this.activeDrawingEnd,
     this.activeDrawingStyle,
     this.activeShapeType,
+    this.activeDrawingPoints = const [],
     this.canvasWidth = 800,
     this.canvasHeight = 1100,
     this.pictureCache,
@@ -632,45 +634,55 @@ class CanvasEngine extends CustomPainter {
     if (activeDrawingStart == null || activeDrawingEnd == null || activeDrawingStyle == null) return;
     if (activeShapeType == null) return;
 
-    final rect = Rect.fromPoints(activeDrawingStart!, activeDrawingEnd!);
-    final previewPaint = Paint()
-      ..color = activeDrawingStyle!.strokeColor.withValues(alpha: 0.5)
-      ..strokeWidth = activeDrawingStyle!.strokeWidth
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
+    final style = activeDrawingStyle!;
+    final rawRect = Rect.fromPoints(activeDrawingStart!, activeDrawingEnd!);
+    final rect = Rect.fromPoints(
+      Offset(min(rawRect.left, rawRect.right), min(rawRect.top, rawRect.bottom)),
+      Offset(max(rawRect.left, rawRect.right), max(rawRect.top, rawRect.bottom)),
+    );
 
     switch (activeShapeType!) {
       case ShapeType.rectangle:
-        canvas.drawRect(rect, previewPaint);
+        _paintRectangle(canvas, RectangleShape(
+          id: '', boundingBox: rect, style: style,
+        ));
+      case ShapeType.roundedRect:
+        _paintRectangle(canvas, RectangleShape(
+          id: '', boundingBox: rect, style: style, cornerRadius: 12,
+        ));
       case ShapeType.ellipse:
-        canvas.drawOval(rect, previewPaint);
+        _paintEllipse(canvas, EllipseShape(
+          id: '', boundingBox: rect, style: style,
+        ));
       case ShapeType.diamond:
-        final center = rect.center;
-        final diamondPath = Path()
-          ..moveTo(center.dx, rect.top)
-          ..lineTo(rect.right, center.dy)
-          ..lineTo(center.dx, rect.bottom)
-          ..lineTo(rect.left, center.dy)
-          ..close();
-        canvas.drawPath(diamondPath, previewPaint);
-      case ShapeType.line:
-        canvas.drawLine(activeDrawingStart!, activeDrawingEnd!, previewPaint);
+        _paintDiamond(canvas, DiamondShape(
+          id: '', boundingBox: rect, style: style,
+        ));
+      case ShapeType.triangle:
+        _paintTriangle(canvas, TriangleShape(
+          id: '', boundingBox: rect, style: style,
+        ));
       case ShapeType.polygon:
-        canvas.drawRect(rect, previewPaint);
+        _paintPolygon(canvas, PolygonShape(
+          id: '', boundingBox: rect, style: style,
+        ));
+      case ShapeType.line:
+        _paintLine(canvas, LineShape(
+          id: '', startPoint: activeDrawingStart!, endPoint: activeDrawingEnd!, style: style,
+        ));
       case ShapeType.arrow:
-        canvas.drawLine(activeDrawingStart!, activeDrawingEnd!, previewPaint);
-        final angle = atan2(
-          activeDrawingEnd!.dy - activeDrawingStart!.dy,
-          activeDrawingEnd!.dx - activeDrawingStart!.dx,
-        );
-        final arrowSize = 10.0 + activeDrawingStyle!.strokeWidth * 2;
-        final arrowPreviewPaint = Paint()
-          ..color = activeDrawingStyle!.strokeColor.withValues(alpha: 0.5)
-          ..style = PaintingStyle.fill;
-        _drawArrowhead(canvas, activeDrawingEnd!, angle, arrowSize, activeDrawingStyle!, ArrowheadStyle.triangle, arrowPreviewPaint);
-        _drawArrowhead(canvas, activeDrawingStart!, angle + pi, arrowSize, activeDrawingStyle!, ArrowheadStyle.none);
-      default:
-        canvas.drawRect(rect, previewPaint);
+        _paintArrow(canvas, ArrowShape(
+          id: '', startPoint: activeDrawingStart!, endPoint: activeDrawingEnd!, style: style,
+        ));
+      case ShapeType.freehand:
+        if (activeDrawingPoints.length >= 2) {
+          _paintFreehand(canvas, FreehandShape(
+            id: '', points: activeDrawingPoints, style: style,
+          ));
+        }
+      case ShapeType.text:
+      case ShapeType.image:
+        break;
     }
   }
 
@@ -746,6 +758,7 @@ class CanvasEngine extends CustomPainter {
         oldDelegate.activeDrawingEnd != activeDrawingEnd ||
         oldDelegate.activeDrawingStyle != activeDrawingStyle ||
         oldDelegate.activeShapeType != activeShapeType ||
+        oldDelegate.activeDrawingPoints != activeDrawingPoints ||
         oldDelegate.pictureCache != pictureCache ||
         oldDelegate.dirtyRegionTracker != dirtyRegionTracker;
   }

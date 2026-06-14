@@ -4,19 +4,22 @@ import '../../../../core/di/injection_container.dart';
 import '../../../../core/services/project_storage_service.dart';
 import '../../../shapes/domain/entities/shape_entity.dart';
 import '../../domain/entities/project.dart';
+import '../../domain/entities/project_summary.dart';
+import 'project_list_provider.dart';
 
 final activeProjectProvider = StateNotifierProvider<ActiveProjectNotifier, Project?>(
   (ref) {
     final storage = ref.read(projectStorageServiceProvider);
-    return ActiveProjectNotifier(storage);
+    return ActiveProjectNotifier(storage, ref);
   },
 );
 
 class ActiveProjectNotifier extends StateNotifier<Project?> {
   final ProjectStorageService _storage;
+  final Ref _ref;
   Timer? _saveTimer;
 
-  ActiveProjectNotifier(this._storage) : super(null);
+  ActiveProjectNotifier(this._storage, this._ref) : super(null);
 
   Future<void> open(Project project) async {
     state = project;
@@ -40,6 +43,14 @@ class ActiveProjectNotifier extends StateNotifier<Project?> {
   void updateName(String name) {
     if (state == null) return;
     state = state!.copyWith(name: name, updatedAt: DateTime.now());
+    _ref.read(projectListProvider.notifier).update(ProjectSummary(
+      id: state!.id,
+      name: state!.name,
+      createdAt: state!.createdAt,
+      updatedAt: state!.updatedAt,
+      thumbnailPath: state!.thumbnailPath,
+      shapeCount: state!.shapes.length,
+    ));
     _scheduleSave();
   }
 

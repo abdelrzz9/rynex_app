@@ -68,6 +68,7 @@ class _InfiniteCanvasState extends ConsumerState<InfiniteCanvas> {
             activeDrawingEnd: activeDrawing.end,
             activeDrawingStyle: activeDrawing.style,
             activeShapeType: activeDrawing.type,
+            activeDrawingPoints: activeDrawing.points,
           ),
           size: Size.infinite,
         ),
