@@ -26,7 +26,7 @@ class SettingsStorageService {
   Future<void> save(AppSettings settings) async {
     final file = await _getFile();
     final data = {
-      'isDarkMode': settings.isDarkMode,
+      'themeMode': settings.themeMode.index,
       'defaultTool': settings.defaultTool.name,
       'defaultStyle': {
         'strokeColor': settings.defaultStyle.strokeColor.toARGB32(),
@@ -40,6 +40,9 @@ class SettingsStorageService {
       'lastOpenedProjectId': settings.lastOpenedProjectId,
       'showGrid': settings.showGrid,
       'snapToGrid': settings.snapToGrid,
+      'canvasWidth': settings.canvasWidth,
+      'canvasHeight': settings.canvasHeight,
+      'canvasSizeLabel': settings.canvasSizeLabel,
     };
     await file.writeAsString(jsonEncode(data));
   }
@@ -49,8 +52,11 @@ class SettingsStorageService {
     if (!await file.exists()) return const AppSettings();
     try {
       final data = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+      final themeModeIndex = data['themeMode'] as int?;
       return AppSettings(
-        isDarkMode: data['isDarkMode'] as bool? ?? false,
+        themeMode: themeModeIndex != null && themeModeIndex >= 0 && themeModeIndex <= 2
+            ? ThemeMode.values[themeModeIndex]
+            : ThemeMode.system,
         defaultTool: DrawingTool.values.firstWhere(
           (t) => t.name == data['defaultTool'],
           orElse: () => DrawingTool.select,
@@ -59,6 +65,9 @@ class SettingsStorageService {
         lastOpenedProjectId: data['lastOpenedProjectId'] as String?,
         showGrid: data['showGrid'] as bool? ?? true,
         snapToGrid: data['snapToGrid'] as bool? ?? false,
+        canvasWidth: (data['canvasWidth'] as num?)?.toDouble() ?? 800,
+        canvasHeight: (data['canvasHeight'] as num?)?.toDouble() ?? 1100,
+        canvasSizeLabel: data['canvasSizeLabel'] as String? ?? 'A4',
       );
     } on Exception catch (_) {
       return const AppSettings();

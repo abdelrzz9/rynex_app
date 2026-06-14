@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/tool_constants.dart';
 import '../../../../core/di/injection_container.dart';
@@ -21,13 +22,23 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     state = await _storage.load();
   }
 
+  void setThemeMode(ThemeMode mode) {
+    state = state.copyWith(themeMode: mode);
+    _save();
+  }
+
   void toggleDarkMode() {
-    state = state.copyWith(isDarkMode: !state.isDarkMode);
+    final newMode = state.themeMode == ThemeMode.dark
+        ? ThemeMode.light
+        : state.themeMode == ThemeMode.light
+            ? ThemeMode.system
+            : ThemeMode.dark;
+    state = state.copyWith(themeMode: newMode);
     _save();
   }
 
   void setDarkMode(bool value) {
-    state = state.copyWith(isDarkMode: value);
+    state = state.copyWith(themeMode: value ? ThemeMode.dark : ThemeMode.light);
     _save();
   }
 
@@ -53,6 +64,11 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
 
   void toggleSnap() {
     state = state.copyWith(snapToGrid: !state.snapToGrid);
+    _save();
+  }
+
+  void setCanvasSize(double width, double height, String label) {
+    state = state.copyWith(canvasWidth: width, canvasHeight: height, canvasSizeLabel: label);
     _save();
   }
 

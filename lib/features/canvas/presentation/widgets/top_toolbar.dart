@@ -7,6 +7,8 @@ import '../../../../core/services/export_service.dart';
 import '../../../../core/utils/uuid_generator.dart';
 import '../../../history/presentation/providers/history_provider.dart';
 import '../../../projects/domain/entities/project.dart';
+import '../../../settings/domain/entities/app_settings.dart';
+import '../../../settings/presentation/providers/settings_provider.dart';
 import '../../../projects/presentation/providers/active_project_provider.dart';
 import '../../../projects/presentation/providers/project_list_provider.dart';
 import '../../../shapes/presentation/providers/shape_provider.dart';
@@ -226,6 +228,36 @@ class TopToolbar extends ConsumerWidget {
     );
   }
 
+  void _showCanvasSizeDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Canvas Size'),
+        content: SizedBox(
+          width: 300,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final preset in PresetCanvasSize.presets)
+                ListTile(
+                  title: Text('${preset.label} (${preset.width}\u00D7${preset.height})'),
+                  leading: const Icon(Icons.crop_square),
+                  onTap: () {
+                    ref.read(canvasProvider.notifier).setCanvasSize(preset.width, preset.height, preset.label);
+                    ref.read(settingsProvider.notifier).setCanvasSize(preset.width, preset.height, preset.label);
+                    Navigator.pop(ctx);
+                  },
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+        ],
+      ),
+    );
+  }
+
   void _showMoreMenu(BuildContext context, WidgetRef ref) {
     showMenu(
       context: context,
@@ -233,13 +265,16 @@ class TopToolbar extends ConsumerWidget {
       items: [
         const PopupMenuItem(value: 'save', child: Text('Save Project')),
         const PopupMenuItem(value: 'duplicate', child: Text('Duplicate Project')),
+        const PopupMenuItem(value: 'canvas_size', child: Text('Canvas Size')),
         const PopupMenuItem(value: 'clear', child: Text('Clear Canvas')),
         const PopupMenuItem(value: 'export_png', child: Text('Export as PNG')),
         const PopupMenuItem(value: 'export_jpg', child: Text('Export as JPG')),
         const PopupMenuItem(value: 'export_pdf', child: Text('Export as PDF')),
       ],
     ).then((value) async {
-      if (value == 'save') {
+      if (value == 'canvas_size') {
+        _showCanvasSizeDialog(context, ref);
+      } else if (value == 'save') {
         await ref.read(activeProjectProvider.notifier).saveNow();
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -272,19 +307,31 @@ class TopToolbar extends ConsumerWidget {
         if (repaintKey == null) return;
         final shapes = ref.read(shapeListProvider);
         if (shapes.isEmpty) return;
-        await ExportService().exportPng(shapes, ExportService.calculateContentBounds(shapes), repaintKey);
+        final cs = ref.read(canvasProvider);
+        await ExportService().exportPng(
+          shapes, ExportService.calculateContentBounds(shapes), repaintKey,
+          canvasWidth: cs.canvasWidth, canvasHeight: cs.canvasHeight, transform: cs.transform,
+        );
       } else if (value == 'export_jpg') {
         final repaintKey = ref.read(canvasRepaintKeyProvider);
         if (repaintKey == null) return;
         final shapes = ref.read(shapeListProvider);
         if (shapes.isEmpty) return;
-        await ExportService().exportJpg(shapes, ExportService.calculateContentBounds(shapes), repaintKey);
+        final cs = ref.read(canvasProvider);
+        await ExportService().exportJpg(
+          shapes, ExportService.calculateContentBounds(shapes), repaintKey,
+          canvasWidth: cs.canvasWidth, canvasHeight: cs.canvasHeight, transform: cs.transform,
+        );
       } else if (value == 'export_pdf') {
         final repaintKey = ref.read(canvasRepaintKeyProvider);
         if (repaintKey == null) return;
         final shapes = ref.read(shapeListProvider);
         if (shapes.isEmpty) return;
-        await ExportService().exportPdf(shapes, ExportService.calculateContentBounds(shapes), repaintKey);
+        final cs = ref.read(canvasProvider);
+        await ExportService().exportPdf(
+          shapes, ExportService.calculateContentBounds(shapes), repaintKey,
+          canvasWidth: cs.canvasWidth, canvasHeight: cs.canvasHeight, transform: cs.transform,
+        );
       }
     });
   }

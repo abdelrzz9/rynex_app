@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../color_picker/presentation/widgets/color_picker_dialog.dart';
 import '../../../history/presentation/providers/history_provider.dart';
 import '../../../selection/presentation/providers/selection_provider.dart';
 import '../../domain/entities/shape.dart';
@@ -232,7 +233,7 @@ class PropertiesPanel extends ConsumerWidget {
   }
 }
 
-class _ColorField extends StatelessWidget {
+class _ColorField extends StatefulWidget {
   final String label;
   final Color color;
   final ValueChanged<Color> onChanged;
@@ -242,6 +243,13 @@ class _ColorField extends StatelessWidget {
     required this.color,
     required this.onChanged,
   });
+
+  @override
+  State<_ColorField> createState() => _ColorFieldState();
+}
+
+class _ColorFieldState extends State<_ColorField> {
+  final List<Color> _recentColors = [];
 
   @override
   Widget build(BuildContext context) {
@@ -254,7 +262,7 @@ class _ColorField extends StatelessWidget {
             onTap: () => _showColorDialog(context),
             child: Container(
               decoration: BoxDecoration(
-                color: color,
+                color: widget.color,
                 border: Border.all(color: Colors.grey.shade400),
                 borderRadius: BorderRadius.circular(4),
               ),
@@ -262,60 +270,23 @@ class _ColorField extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        Text(label, style: const TextStyle(fontSize: 12)),
+        Text(widget.label, style: const TextStyle(fontSize: 12)),
       ],
     );
   }
 
   void _showColorDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Choose Color'),
-        content: Wrap(
-          spacing: 4,
-          runSpacing: 4,
-          children: [
-            Colors.black,
-            Colors.white,
-            Colors.red,
-            Colors.pink,
-            Colors.purple,
-            Colors.deepPurple,
-            Colors.indigo,
-            Colors.blue,
-            Colors.lightBlue,
-            Colors.cyan,
-            Colors.teal,
-            Colors.green,
-            Colors.lightGreen,
-            Colors.lime,
-            Colors.yellow,
-            Colors.amber,
-            Colors.orange,
-            Colors.deepOrange,
-            Colors.brown,
-            Colors.grey,
-            Colors.blueGrey,
-          ].map((c) {
-            return GestureDetector(
-              onTap: () {
-                onChanged(c);
-                Navigator.of(ctx).pop();
-              },
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: c,
-                  border: Border.all(color: Colors.grey.shade400),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ),
-    );
+    ColorPickerDialog.show(
+      context,
+      widget.color,
+      recentColors: _recentColors,
+    ).then((result) {
+      if (result != null) {
+        widget.onChanged(result);
+        _recentColors.removeWhere((c) => c.toARGB32() == result.toARGB32());
+        _recentColors.insert(0, result);
+        if (_recentColors.length > 8) _recentColors.removeLast();
+      }
+    });
   }
 }

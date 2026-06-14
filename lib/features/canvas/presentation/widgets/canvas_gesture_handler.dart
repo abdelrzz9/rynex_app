@@ -47,6 +47,7 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
   List<Offset> _freehandPoints = [];
   Offset? _selectionDragStart;
   Map<String, Offset> _selectedShapePositions = {};
+  Offset? _panStart;
 
   // Resize/rotate state
   String? _resizeShapeId;
@@ -72,6 +73,10 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
     final tool = ref.read(activeToolProvider);
     if (tool == DrawingTool.select) {
       _handleSelectStart(details);
+    } else if (tool == DrawingTool.hand) {
+      _panStart = details.localFocalPoint;
+    } else if (tool == DrawingTool.eraser) {
+      _handleDrawStart(details);
     } else {
       _handleDrawStart(details);
     }
@@ -81,6 +86,12 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
     final tool = ref.read(activeToolProvider);
     if (tool == DrawingTool.select) {
       _handleSelectUpdate(details);
+    } else if (tool == DrawingTool.hand) {
+      if (_panStart != null) {
+        final delta = details.localFocalPoint - _panStart!;
+        ref.read(canvasProvider.notifier).panBy(delta);
+        _panStart = details.localFocalPoint;
+      }
     } else if (_drawStart != null) {
       _handleDrawUpdate(details);
     }
@@ -90,6 +101,8 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
     final tool = ref.read(activeToolProvider);
     if (tool == DrawingTool.select) {
       _finishSelect();
+    } else if (tool == DrawingTool.hand) {
+      _panStart = null;
     } else if (_drawStart != null && _drawCurrent != null) {
       _finishDrawing(tool);
     }
@@ -395,7 +408,7 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
     _drawStart = point;
     _drawCurrent = point;
 
-    if (tool == DrawingTool.freehand || tool.isDrawingTool) {
+    if (tool == DrawingTool.freehand || tool.isDrawingTool || tool == DrawingTool.eraser) {
       _freehandPoints = [_drawStart!];
     }
 
@@ -413,7 +426,7 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
     final point = transform.screenToWorld(details.localFocalPoint);
     _drawCurrent = point;
 
-    if (tool == DrawingTool.freehand || tool.isDrawingTool) {
+    if (tool == DrawingTool.freehand || tool.isDrawingTool || tool == DrawingTool.eraser) {
       _freehandPoints.add(_drawCurrent!);
     }
 
@@ -436,6 +449,11 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
         final shape = FreehandShape(id: UuidGenerator.generate(), points: simplified, style: drawStyle, layer: _activeLayerInfo());
         ref.read(historyProvider.notifier).executeAdd(shape);
       }
+      return;
+    }
+
+    if (tool == DrawingTool.eraser && _freehandPoints.length >= 2) {
+      _eraseShapes();
       return;
     }
 
@@ -604,6 +622,27 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
       isLocked: active.isLocked,
       name: active.name,
     );
+  }
+
+  void _eraseShapes() {
+    final shapes = ref.read(shapeListProvider);
+    final toRemove = <ShapeEntity>[];
+    const eraserSize = 15.0;
+
+    for (final shape in shapes) {
+      if (!shape.isVisible || shape.isLocked) continue;
+      for (final point in _freehandPoints) {
+        final padded = shape.rotatedBoundingBox.inflate(eraserSize);
+        if (padded.contains(point)) {
+          toRemove.add(shape);
+          break;
+        }
+      }
+    }
+
+    if (toRemove.isNotEmpty) {
+      ref.read(historyProvider.notifier).executeDelete(toRemove);
+    }
   }
 
   ShapeEntity? _hitTestTopmost(List<ShapeEntity> shapes, Offset worldPoint) {

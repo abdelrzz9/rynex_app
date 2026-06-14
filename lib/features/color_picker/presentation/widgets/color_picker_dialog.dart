@@ -4,19 +4,22 @@ import 'package:flutter/material.dart';
 class ColorPickerDialog extends StatefulWidget {
   final Color initialColor;
   final ValueChanged<Color> onColorChanged;
+  final List<Color> recentColors;
 
   const ColorPickerDialog({
     super.key,
     required this.initialColor,
     required this.onColorChanged,
+    this.recentColors = const [],
   });
 
-  static Future<Color?> show(BuildContext context, Color initialColor) {
+  static Future<Color?> show(BuildContext context, Color initialColor, {List<Color> recentColors = const []}) {
     return showDialog<Color>(
       context: context,
       builder: (ctx) => ColorPickerDialog(
         initialColor: initialColor,
         onColorChanged: (_) {},
+        recentColors: recentColors,
       ),
     );
   }
@@ -38,7 +41,7 @@ class _ColorPickerDialogState extends State<ColorPickerDialog> {
     _hue = hsb[0];
     _saturation = hsb[1];
     _brightness = hsb[2];
-    _alpha = widget.initialColor.opacity;
+    _alpha = widget.initialColor.a;
   }
 
   Color get _currentColor => HSLColor.fromAHSL(_alpha, _hue, _saturation, _brightness).toColor();
@@ -67,6 +70,10 @@ class _ColorPickerDialogState extends State<ColorPickerDialog> {
               _buildHexInput(),
               const SizedBox(height: 12),
               _buildPresetColors(),
+              if (widget.recentColors.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _buildRecentColors(),
+              ],
               const SizedBox(height: 16),
               _buildPreview(),
             ],
@@ -183,6 +190,45 @@ class _ColorPickerDialogState extends State<ColorPickerDialog> {
             borderRadius: BorderRadius.circular(6),
             border: Border.all(color: Colors.grey.shade400),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecentColors() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Recent', style: TextStyle(fontSize: 12)),
+        const SizedBox(height: 4),
+        Wrap(
+          spacing: 4,
+          runSpacing: 4,
+          children: widget.recentColors.map((color) {
+            final isSelected = _currentColor.toARGB32() == color.toARGB32();
+            return GestureDetector(
+              onTap: () {
+                final hsb = _rgbToHsb(color);
+                setState(() {
+                  _hue = hsb[0];
+                  _saturation = hsb[1];
+                  _brightness = hsb[2];
+                });
+              },
+              child: Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: isSelected ? const Color(0xFF3B82F6) : Colors.grey.shade400,
+                    width: isSelected ? 2 : 1,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
         ),
       ],
     );

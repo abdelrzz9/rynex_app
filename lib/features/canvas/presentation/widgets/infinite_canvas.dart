@@ -60,6 +60,8 @@ class _InfiniteCanvasState extends ConsumerState<InfiniteCanvas> {
             selection: selection,
             showGrid: canvasState.showGrid,
             isDark: isDark,
+            canvasWidth: canvasState.canvasWidth,
+            canvasHeight: canvasState.canvasHeight,
             pictureCache: pictureCache,
             dirtyRegionTracker: _dirtyRegionTracker,
             activeDrawingStart: activeDrawing.start,

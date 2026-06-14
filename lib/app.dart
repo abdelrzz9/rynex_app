@@ -11,14 +11,14 @@ class RynexApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
-    final isDark = settings.isDarkMode;
+    final themeMode = settings.themeMode;
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'Rynex Draw',
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
+      themeMode: themeMode,
       routerConfig: appRouter,
     );
   }

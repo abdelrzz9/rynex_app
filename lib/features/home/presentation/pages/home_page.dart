@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/uuid_generator.dart';
+import '../../../settings/presentation/providers/settings_provider.dart';
 import '../../../canvas/presentation/providers/canvas_provider.dart';
 import '../../../history/presentation/providers/history_provider.dart';
 import '../../../projects/domain/entities/project.dart';
@@ -83,7 +84,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                         _ActionButton(
                           icon: Icons.settings,
                           label: 'Settings',
-                          onTap: () {},
+                          onTap: () => _showSettingsDialog(context),
                           isDark: isDark,
                         ),
                       ],
@@ -187,6 +188,46 @@ class _HomePageState extends ConsumerState<HomePage> {
       if (!mounted) return;
       context.goNamed('editor');
     }
+  }
+
+  void _showSettingsDialog(BuildContext context) {
+    final settings = ref.read(settingsProvider);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Settings'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Theme', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            ...ThemeMode.values.map((mode) {
+              final label = switch (mode) { ThemeMode.system => 'Follow System', ThemeMode.light => 'Light', ThemeMode.dark => 'Dark' };
+              return RadioListTile<ThemeMode>(
+                title: Text(label),
+                value: mode,
+                groupValue: settings.themeMode,
+                onChanged: (v) {
+                  if (v != null) {
+                    ref.read(settingsProvider.notifier).setThemeMode(v);
+                    Navigator.pop(ctx);
+                  }
+                },
+                dense: true,
+              );
+            }),
+            const SizedBox(height: 12),
+            Text('Canvas Size: ${settings.canvasSizeLabel} (${settings.canvasWidth}\u00D7${settings.canvasHeight})',
+                style: const TextStyle(fontSize: 13)),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+        ],
+      ),
+    );
   }
 }
 

@@ -26,10 +26,15 @@ class AppColors {
   static const Color textPrimaryLight = Color(0xFF212121);
   static const Color textSecondaryLight = Color(0xFF757575);
 
-  // Accent
+  // Accent (Dark mode - Blue)
   static const Color accent = Color(0xFF3B82F6);
   static const Color accentLight = Color(0xFF60A5FA);
   static const Color accentDark = Color(0xFF2563EB);
+
+  // Accent (Light mode - Violet)
+  static const Color accentViolet = Color(0xFF7C3AED);
+  static const Color accentVioletLight = Color(0xFFA78BFA);
+  static const Color accentVioletDark = Color(0xFF5B21B6);
 }
 
 class AppTheme {
@@ -41,9 +46,9 @@ class AppTheme {
       brightness: Brightness.light,
       scaffoldBackgroundColor: AppColors.lightBg,
       colorScheme: ColorScheme.light(
-        primary: AppColors.accent,
+        primary: AppColors.accentViolet,
         onPrimary: Colors.white,
-        secondary: AppColors.accentLight,
+        secondary: AppColors.accentVioletLight,
         surface: AppColors.lightSurface,
         onSurface: AppColors.textPrimaryLight,
         outline: AppColors.lightBorder,

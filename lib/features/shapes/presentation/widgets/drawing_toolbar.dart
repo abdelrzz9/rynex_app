@@ -104,7 +104,7 @@ class DrawingToolbar extends ConsumerWidget {
   }
 
   static const List<List<DrawingTool>> _toolGroups = [
-    [DrawingTool.select],
+    [DrawingTool.select, DrawingTool.hand],
     [DrawingTool.pencil, DrawingTool.pen, DrawingTool.marker, DrawingTool.brush],
     [DrawingTool.eraser],
     [DrawingTool.rectangle, DrawingTool.roundedRect, DrawingTool.ellipse, DrawingTool.diamond, DrawingTool.triangle, DrawingTool.polygon],
@@ -117,6 +117,8 @@ class DrawingToolbar extends ConsumerWidget {
     switch (tool) {
       case DrawingTool.select:
         return Icons.pan_tool_outlined;
+      case DrawingTool.hand:
+        return Icons.pan_tool;
       case DrawingTool.pencil:
         return Icons.edit;
       case DrawingTool.pen:
@@ -192,7 +194,7 @@ class _ToolButton extends StatelessWidget {
             child: Icon(
               icon,
               size: iconSize,
-              color: isActive ? AppColors.accent : iconColor,
+              color: isActive ? Theme.of(context).colorScheme.primary : iconColor,
             ),
           ),
         ),

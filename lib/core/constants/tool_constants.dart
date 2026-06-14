@@ -2,6 +2,7 @@ import '../../features/shapes/domain/entities/shape_type.dart';
 
 enum DrawingTool {
   select,
+  hand,
   pencil,
   pen,
   marker,
@@ -25,6 +26,8 @@ extension DrawingToolKey on DrawingTool {
     switch (this) {
       case DrawingTool.select:
         return 'V';
+      case DrawingTool.hand:
+        return 'H';
       case DrawingTool.pencil:
         return 'N';
       case DrawingTool.pen:
@@ -64,6 +67,8 @@ extension DrawingToolKey on DrawingTool {
     switch (this) {
       case DrawingTool.select:
         return 'Select';
+      case DrawingTool.hand:
+        return 'Hand';
       case DrawingTool.pencil:
         return 'Pencil';
       case DrawingTool.pen:
@@ -129,6 +134,8 @@ extension DrawingToolKey on DrawingTool {
         return ShapeType.image;
       case DrawingTool.select:
         throw ArgumentError('Select tool has no shape type');
+      case DrawingTool.hand:
+        throw ArgumentError('Hand tool has no shape type');
       case DrawingTool.eraser:
         throw ArgumentError('Eraser tool has no shape type');
     }
@@ -141,6 +148,15 @@ extension DrawingToolKey on DrawingTool {
       case DrawingTool.marker:
       case DrawingTool.brush:
       case DrawingTool.freehand:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  bool get isNavigationTool {
+    switch (this) {
+      case DrawingTool.hand:
         return true;
       default:
         return false;

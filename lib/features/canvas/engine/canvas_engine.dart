@@ -33,6 +33,8 @@ class CanvasEngine extends CustomPainter {
   final Offset? activeDrawingEnd;
   final ShapeStyle? activeDrawingStyle;
   final ShapeType? activeShapeType;
+  final double canvasWidth;
+  final double canvasHeight;
 
   final PictureRecorderManager? pictureCache;
   final DirtyRegionTracker? dirtyRegionTracker;
@@ -47,6 +49,8 @@ class CanvasEngine extends CustomPainter {
     this.activeDrawingEnd,
     this.activeDrawingStyle,
     this.activeShapeType,
+    this.canvasWidth = 800,
+    this.canvasHeight = 1100,
     this.pictureCache,
     this.dirtyRegionTracker,
   });
@@ -68,6 +72,8 @@ class CanvasEngine extends CustomPainter {
     canvas.save();
     canvas.translate(transform.pan.dx, transform.pan.dy);
     canvas.scale(transform.zoom);
+
+    _paintCanvasBoundary(canvas);
 
     final visibleShapes = shapes.where((s) {
       if (!s.isVisible) return false;
@@ -115,6 +121,24 @@ class CanvasEngine extends CustomPainter {
     for (var y = startY; y < size.height + gridSize; y += gridSize) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
     }
+  }
+
+  void _paintCanvasBoundary(Canvas canvas) {
+    final canvasRect = Rect.fromLTWH(0, 0, canvasWidth, canvasHeight);
+
+    final shadowPaint = Paint()
+      ..color = isDark ? Colors.black26 : Colors.black12;
+    canvas.drawRect(canvasRect.translate(4, 4), shadowPaint);
+
+    final bgPaint = Paint()
+      ..color = isDark ? const Color(0xFF2A2A2A) : Colors.white;
+    canvas.drawRect(canvasRect, bgPaint);
+
+    final borderPaint = Paint()
+      ..color = isDark ? Colors.white24 : Colors.black26
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    canvas.drawRect(canvasRect, borderPaint);
   }
 
   void _paintShape(Canvas canvas, ShapeEntity shape) {

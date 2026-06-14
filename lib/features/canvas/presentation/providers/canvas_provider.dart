@@ -96,6 +96,14 @@ class CanvasNotifier extends StateNotifier<CanvasState> {
       transform: CanvasTransform(zoom: camera.zoom, pan: camera.pan),
     );
   }
+
+  void setCanvasSize(double width, double height, String label) {
+    state = state.copyWith(
+      canvasWidth: width,
+      canvasHeight: height,
+      canvasSizeLabel: label,
+    );
+  }
 }
 
 final canvasTransformProvider = Provider<CanvasTransform>((ref) {
