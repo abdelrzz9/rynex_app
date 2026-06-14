@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/constants/tool_constants.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../history/presentation/providers/history_provider.dart';
 import '../../../layers/presentation/widgets/layer_panel.dart';
 import '../../../projects/presentation/providers/active_project_provider.dart';
-import '../../../shapes/presentation/providers/active_tool_provider.dart';
 import '../../../shapes/presentation/providers/shape_provider.dart';
 import '../../../shapes/presentation/widgets/drawing_toolbar.dart';
 import '../../../shapes/presentation/widgets/properties_panel.dart';
@@ -38,37 +38,45 @@ class _CanvasEditorPageState extends ConsumerState<CanvasEditorPage> {
     final showSidePanels = screenWidth >= 1200;
 
     return Scaffold(
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? AppColors.darkBg
+          : AppColors.lightBg,
       body: Column(
         children: [
           const TopToolbar(),
-          const SizedBox(height: 8),
           Expanded(
             child: isMobile
-                ? _buildMobileLayout(context, ref)
-                : _buildDesktopLayout(context, ref, isTablet, showSidePanels),
+                ? _buildMobileLayout()
+                : _buildDesktopLayout(isTablet, showSidePanels),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMobileLayout(BuildContext context, WidgetRef ref) {
-    return Stack(
+  Widget _buildMobileLayout() {
+    return Column(
       children: [
-        const CanvasGestureHandler(
-          child: InfiniteCanvas(),
+        Expanded(
+          child: Stack(
+            children: [
+              const CanvasGestureHandler(
+                child: InfiniteCanvas(),
+              ),
+              Positioned(
+                left: 8,
+                top: 8,
+                child: _buildQuickActions(),
+              ),
+            ],
+          ),
         ),
-        Positioned(
-          left: 8,
-          top: 8,
-          child: _buildMiniToolbar(context, ref),
-        ),
+        const DrawingToolbar(),
       ],
     );
   }
 
-  Widget _buildDesktopLayout(
-      BuildContext context, WidgetRef ref, bool isTablet, bool showSidePanels) {
+  Widget _buildDesktopLayout(bool isTablet, bool showSidePanels) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -90,74 +98,35 @@ class _CanvasEditorPageState extends ConsumerState<CanvasEditorPage> {
     );
   }
 
-  Widget _buildMiniToolbar(BuildContext context, WidgetRef ref) {
-    final activeTool = ref.watch(activeToolProvider);
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final iconSize = screenWidth < 360 ? 18.0 : 20.0;
-    const buttonSize = 48.0;
+  Widget _buildQuickActions() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color: isDark ? AppColors.darkCard : AppColors.lightCard,
         borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
       ),
-      child: Wrap(
-        children: DrawingTool.values.map((tool) {
-          return InkWell(
-            onTap: () => ref.read(activeToolProvider.notifier).state = tool,
-            borderRadius: BorderRadius.circular(4),
-            child: Container(
-              width: buttonSize,
-              height: buttonSize,
-              decoration: BoxDecoration(
-                color: activeTool == tool
-                    ? Theme.of(context).colorScheme.primaryContainer
-                    : null,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Icon(
-                _toolIcon(tool),
-                size: iconSize,
-                color: activeTool == tool
-                    ? Theme.of(context).colorScheme.primary
-                    : null,
-              ),
-            ),
-          );
-        }).toList(),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _quickButton(Icons.undo, () => ref.read(historyProvider.notifier).undo()),
+          _quickButton(Icons.redo, () => ref.read(historyProvider.notifier).redo()),
+        ],
       ),
     );
   }
 
-  IconData _toolIcon(DrawingTool tool) {
-    switch (tool) {
-      case DrawingTool.select:
-        return Icons.pan_tool_outlined;
-      case DrawingTool.rectangle:
-        return Icons.rectangle_outlined;
-      case DrawingTool.ellipse:
-        return Icons.circle_outlined;
-      case DrawingTool.diamond:
-        return Icons.diamond_outlined;
-      case DrawingTool.triangle:
-        return Icons.change_history;
-      case DrawingTool.line:
-        return Icons.show_chart;
-      case DrawingTool.arrow:
-        return Icons.arrow_forward;
-      case DrawingTool.freehand:
-        return Icons.brush;
-      case DrawingTool.text:
-        return Icons.text_fields;
-      case DrawingTool.image:
-        return Icons.image_outlined;
-    }
+  Widget _quickButton(IconData icon, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        width: 40,
+        height: 40,
+        alignment: Alignment.center,
+        child: Icon(icon, size: 20),
+      ),
+    );
   }
 }

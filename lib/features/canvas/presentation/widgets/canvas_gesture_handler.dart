@@ -19,6 +19,7 @@ import '../../../shapes/domain/entities/ellipse_shape.dart';
 import '../../../shapes/domain/entities/freehand_shape.dart';
 import '../../../shapes/domain/entities/image_shape.dart';
 import '../../../shapes/domain/entities/line_shape.dart';
+import '../../../shapes/domain/entities/polygon_shape.dart';
 import '../../../shapes/domain/entities/rectangle_shape.dart';
 import '../../../shapes/domain/entities/shape.dart';
 import '../../../shapes/domain/entities/shape_entity.dart';
@@ -27,6 +28,7 @@ import '../../../shapes/domain/entities/text_shape.dart';
 import '../../../shapes/domain/entities/triangle_shape.dart';
 import '../../../shapes/presentation/providers/active_tool_provider.dart';
 import '../../../shapes/presentation/providers/shape_provider.dart';
+import '../providers/active_drawing_provider.dart';
 import '../providers/canvas_provider.dart';
 
 class CanvasGestureHandler extends ConsumerStatefulWidget {
@@ -50,11 +52,6 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
   String? _resizeShapeId;
   ShapeEntity? _resizeOldState;
   Offset? _resizeStartWorldPoint;
-
-  Offset? activeDrawStart;
-  Offset? activeDrawEnd;
-  ShapeStyle? activeDrawStyle;
-  ShapeType? activeDrawType;
 
   bool get _isShiftPressed => HardwareKeyboard.instance.isShiftPressed;
 
@@ -106,10 +103,7 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
     _resizeOldState = null;
     _resizeStartWorldPoint = null;
 
-    activeDrawStart = null;
-    activeDrawEnd = null;
-    activeDrawStyle = null;
-    activeDrawType = null;
+    ref.read(activeDrawingProvider.notifier).state = const ActiveDrawingState();
   }
 
   void _onTapUp(TapUpDetails details) {
@@ -397,41 +391,49 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
     final transform = ref.read(canvasTransformProvider);
     final tool = ref.read(activeToolProvider);
     final style = ref.read(activeStyleProvider);
-    _drawStart = transform.screenToWorld(details.localFocalPoint);
-    _drawCurrent = _drawStart;
+    final point = transform.screenToWorld(details.localFocalPoint);
+    _drawStart = point;
+    _drawCurrent = point;
 
-    if (tool == DrawingTool.freehand) {
+    if (tool == DrawingTool.freehand || tool.isDrawingTool) {
       _freehandPoints = [_drawStart!];
     }
 
-    activeDrawStart = _drawStart;
-    activeDrawEnd = _drawStart;
-    activeDrawStyle = style;
-    activeDrawType = tool.toShapeType();
-    setState(() {});
+    ref.read(activeDrawingProvider.notifier).state = ActiveDrawingState(
+      start: _drawStart,
+      end: _drawStart,
+      style: style,
+      type: tool.toShapeType(),
+    );
   }
 
   void _handleDrawUpdate(ScaleUpdateDetails details) {
     final transform = ref.read(canvasTransformProvider);
     final tool = ref.read(activeToolProvider);
-    _drawCurrent = transform.screenToWorld(details.localFocalPoint);
+    final point = transform.screenToWorld(details.localFocalPoint);
+    _drawCurrent = point;
 
-    if (tool == DrawingTool.freehand) {
+    if (tool == DrawingTool.freehand || tool.isDrawingTool) {
       _freehandPoints.add(_drawCurrent!);
     }
 
-    activeDrawEnd = _drawCurrent;
-    setState(() {});
+    ref.read(activeDrawingProvider.notifier).state = ActiveDrawingState(
+      start: _drawStart,
+      end: _drawCurrent,
+      style: ref.read(activeStyleProvider),
+      type: tool.toShapeType(),
+    );
   }
 
   void _finishDrawing(DrawingTool tool) {
     if (_drawStart == null || _drawCurrent == null) return;
     final style = ref.read(activeStyleProvider);
 
-    if (tool == DrawingTool.freehand) {
+    if (tool == DrawingTool.freehand || tool.isDrawingTool) {
       if (_freehandPoints.length >= 3) {
         final simplified = simplifyPoints(_freehandPoints, CanvasConstants.freehandSimplifyEpsilon);
-        final shape = FreehandShape(id: UuidGenerator.generate(), points: simplified, style: style, layer: _activeLayerInfo());
+        final drawStyle = _styleForTool(tool, style);
+        final shape = FreehandShape(id: UuidGenerator.generate(), points: simplified, style: drawStyle, layer: _activeLayerInfo());
         ref.read(historyProvider.notifier).executeAdd(shape);
       }
       return;
@@ -451,12 +453,16 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
     switch (tool) {
       case DrawingTool.rectangle:
         shape = RectangleShape(id: id, boundingBox: normalizedRect, style: style, layer: _activeLayerInfo());
+      case DrawingTool.roundedRect:
+        shape = RectangleShape(id: id, boundingBox: normalizedRect, style: style, layer: _activeLayerInfo(), cornerRadius: 12);
       case DrawingTool.ellipse:
         shape = EllipseShape(id: id, boundingBox: normalizedRect, style: style, layer: _activeLayerInfo());
       case DrawingTool.diamond:
         shape = DiamondShape(id: id, boundingBox: normalizedRect, style: style, layer: _activeLayerInfo());
       case DrawingTool.triangle:
         shape = TriangleShape(id: id, boundingBox: normalizedRect, style: style, layer: _activeLayerInfo());
+      case DrawingTool.polygon:
+        shape = PolygonShape(id: id, boundingBox: normalizedRect, style: style, layer: _activeLayerInfo(), sides: 6);
       case DrawingTool.line:
         shape = LineShape(id: id, startPoint: _drawStart!, endPoint: _drawCurrent!, style: style, layer: _activeLayerInfo());
       case DrawingTool.arrow:
@@ -467,6 +473,21 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
 
     if (shape != null) {
       ref.read(historyProvider.notifier).executeAdd(shape);
+    }
+  }
+
+  ShapeStyle _styleForTool(DrawingTool tool, ShapeStyle base) {
+    switch (tool) {
+      case DrawingTool.pencil:
+        return base.copyWith(strokeWidth: 1.5, opacity: 0.9);
+      case DrawingTool.pen:
+        return base.copyWith(strokeWidth: 3.0, opacity: 1.0);
+      case DrawingTool.marker:
+        return base.copyWith(strokeWidth: 8.0, opacity: 0.5);
+      case DrawingTool.brush:
+        return base.copyWith(strokeWidth: 5.0, opacity: 0.8);
+      default:
+        return base;
     }
   }
 

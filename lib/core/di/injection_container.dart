@@ -10,4 +10,4 @@ final settingsStorageServiceProvider = Provider<SettingsStorageService>((ref) {
   return SettingsStorageService();
 });
 
-final themeModeProvider = StateProvider<bool>((ref) => false);
+final themeModeProvider = StateProvider<bool>((ref) => true);

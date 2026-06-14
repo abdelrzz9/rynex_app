@@ -9,6 +9,7 @@ import 'ellipse_shape.dart';
 import 'freehand_shape.dart';
 import 'image_shape.dart';
 import 'line_shape.dart';
+import 'polygon_shape.dart';
 import 'rectangle_shape.dart';
 import 'shape.dart';
 import 'shape_entity.dart';
@@ -20,15 +21,16 @@ class ShapeFactory {
     final type = json['type'] as String;
     switch (type) {
       case 'rectangle':
-        return _parseRectangle(json);
       case 'roundedRect':
-        return _parseRoundedRect(json);
+        return _parseRectangle(json);
       case 'ellipse':
         return _parseEllipse(json);
       case 'diamond':
         return _parseDiamond(json);
       case 'triangle':
         return _parseTriangle(json);
+      case 'polygon':
+        return _parsePolygon(json);
       case 'line':
         return _parseLine(json);
       case 'arrow':
@@ -100,28 +102,6 @@ class ShapeFactory {
     );
   }
 
-  static RoundedRectShape _parseRoundedRect(Map<String, dynamic> json) {
-    return RoundedRectShape(
-      id: json['id'] as String,
-      boundingBox: Rect.fromLTWH(
-        (json['x'] as num).toDouble(),
-        (json['y'] as num).toDouble(),
-        (json['width'] as num).toDouble(),
-        (json['height'] as num).toDouble(),
-      ),
-      rotation: (json['rotation'] as num?)?.toDouble() ?? 0.0,
-      style: _parseStyle(json),
-      layer: _parseLayer(json),
-      isLocked: json['isLocked'] as bool? ?? false,
-      isVisible: json['isVisible'] as bool? ?? true,
-      createdAt: _parseDate(json),
-      topLeftRadius: (json['topLeftRadius'] as num?)?.toDouble() ?? 0.0,
-      topRightRadius: (json['topRightRadius'] as num?)?.toDouble() ?? 0.0,
-      bottomRightRadius: (json['bottomRightRadius'] as num?)?.toDouble() ?? 0.0,
-      bottomLeftRadius: (json['bottomLeftRadius'] as num?)?.toDouble() ?? 0.0,
-    );
-  }
-
   static EllipseShape _parseEllipse(Map<String, dynamic> json) {
     return EllipseShape(
       id: json['id'] as String,
@@ -176,6 +156,25 @@ class ShapeFactory {
       direction: json['direction'] != null
           ? TriangleDirection.values.firstWhere((d) => d.name == json['direction'])
           : TriangleDirection.up,
+    );
+  }
+
+  static PolygonShape _parsePolygon(Map<String, dynamic> json) {
+    return PolygonShape(
+      id: json['id'] as String,
+      boundingBox: Rect.fromLTWH(
+        (json['x'] as num).toDouble(),
+        (json['y'] as num).toDouble(),
+        (json['width'] as num).toDouble(),
+        (json['height'] as num).toDouble(),
+      ),
+      rotation: (json['rotation'] as num?)?.toDouble() ?? 0.0,
+      style: _parseStyle(json),
+      layer: _parseLayer(json),
+      isLocked: json['isLocked'] as bool? ?? false,
+      isVisible: json['isVisible'] as bool? ?? true,
+      createdAt: _parseDate(json),
+      sides: (json['sides'] as num?)?.toInt() ?? 6,
     );
   }
 

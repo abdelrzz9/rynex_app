@@ -13,6 +13,7 @@ import '../../shapes/domain/entities/rectangle_shape.dart';
 import '../../shapes/domain/entities/shape.dart';
 import '../../shapes/domain/entities/shape_entity.dart';
 import '../../shapes/domain/entities/shape_type.dart';
+import '../../shapes/domain/entities/polygon_shape.dart';
 import '../../shapes/domain/entities/text_shape.dart';
 import '../../shapes/domain/entities/triangle_shape.dart';
 import '../../shapes/domain/value_objects/fill_style.dart';
@@ -153,6 +154,8 @@ class CanvasEngine extends CustomPainter {
         _paintArrow(recordCanvas, shape as ArrowShape);
       case ShapeType.freehand:
         _paintFreehand(recordCanvas, shape as FreehandShape);
+      case ShapeType.polygon:
+        _paintPolygon(recordCanvas, shape as PolygonShape);
       case ShapeType.text:
         _paintText(recordCanvas, shape as TextShape);
       case ShapeType.image:
@@ -331,6 +334,30 @@ class CanvasEngine extends CustomPainter {
       );
       canvas.drawPath(trianglePath(jittered), strokePaint);
     }
+  }
+
+  void _paintPolygon(Canvas canvas, PolygonShape shape) {
+    final vertices = shape.vertices;
+
+    final path = Path()..moveTo(vertices[0].dx, vertices[0].dy);
+    for (var i = 1; i < vertices.length; i++) {
+      path.lineTo(vertices[i].dx, vertices[i].dy);
+    }
+    path.close();
+
+    if (shape.style.fillStyle != FillStyle.none) {
+      final fillPaint = Paint()
+        ..color = shape.style.fillColor.withValues(alpha: shape.style.opacity)
+        ..style = PaintingStyle.fill;
+      canvas.drawPath(path, fillPaint);
+    }
+
+    final strokePaint = Paint()
+      ..color = shape.style.strokeColor.withValues(alpha: shape.style.opacity)
+      ..strokeWidth = shape.style.strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    canvas.drawPath(path, strokePaint);
   }
 
   void _paintLine(Canvas canvas, LineShape shape) {
@@ -604,6 +631,8 @@ class CanvasEngine extends CustomPainter {
         canvas.drawPath(diamondPath, previewPaint);
       case ShapeType.line:
         canvas.drawLine(activeDrawingStart!, activeDrawingEnd!, previewPaint);
+      case ShapeType.polygon:
+        canvas.drawRect(rect, previewPaint);
       case ShapeType.arrow:
         canvas.drawLine(activeDrawingStart!, activeDrawingEnd!, previewPaint);
         final angle = atan2(

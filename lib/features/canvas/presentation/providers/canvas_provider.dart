@@ -21,15 +21,16 @@ class CanvasNotifier extends StateNotifier<CanvasState> {
   CanvasNotifier() : super(const CanvasState());
 
   void zoomIn(Offset focalPoint) {
-    _zoomToPoint(focalPoint, 1.1);
+    _zoomToPoint(focalPoint, CanvasConstants.zoomInFactor);
   }
 
   void zoomOut(Offset focalPoint) {
-    _zoomToPoint(focalPoint, 1 / 1.1);
+    _zoomToPoint(focalPoint, CanvasConstants.zoomOutFactor);
   }
 
   void zoomToPoint(Offset screenPoint, double delta) {
-    final newZoom = (state.transform.zoom * (1 + delta * 0.001))
+    final factor = 1 + delta * 0.001;
+    final newZoom = (state.transform.zoom * factor)
         .clamp(CanvasConstants.minZoom, CanvasConstants.maxZoom);
     final worldPoint = state.transform.screenToWorld(screenPoint);
     final newPan = screenPoint - worldPoint * newZoom;

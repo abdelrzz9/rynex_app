@@ -23,6 +23,43 @@ class ExportService {
     await _shareFile(file);
   }
 
+  Future<void> exportJpg(List<ShapeEntity> shapes, Rect contentBounds, GlobalKey repaintKey) async {
+    final boundary = repaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+    if (boundary == null) return;
+
+    final image = await boundary.toImage(pixelRatio: 2.0);
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+    if (byteData == null) return;
+
+    final dir = await getTemporaryDirectory();
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final file = File('${dir.path}/rynex_export_$timestamp.jpg');
+
+    final pngBytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    if (pngBytes != null) {
+      await file.writeAsBytes(pngBytes.buffer.asUint8List());
+    }
+
+    await _shareFile(file);
+  }
+
+  Future<void> exportPdf(List<ShapeEntity> shapes, Rect contentBounds, GlobalKey repaintKey) async {
+    final boundary = repaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+    if (boundary == null) return;
+
+    final image = await boundary.toImage(pixelRatio: 2.0);
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    if (byteData == null) return;
+
+    final dir = await getTemporaryDirectory();
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final file = File('${dir.path}/rynex_export_$timestamp.pdf');
+
+    await file.writeAsBytes(byteData.buffer.asUint8List());
+
+    await _shareFile(file);
+  }
+
   Future<void> exportJson(List<ShapeEntity> shapes) async {
     final data = {
       'version': 1,
@@ -39,8 +76,6 @@ class ExportService {
   }
 
   Future<void> _shareFile(File file) async {
-    // On desktop/mobile, use share dialog
-    // For now, save to downloads directory
     try {
       final downloads = Directory('/storage/emulated/0/Download');
       if (await downloads.exists()) {
@@ -48,7 +83,6 @@ class ExportService {
       }
     } on Exception catch (_) {}
 
-    // Print path for debugging
     debugPrint('Exported to: ${file.path}');
   }
 

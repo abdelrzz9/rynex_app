@@ -4,6 +4,7 @@ enum ShapeType {
   ellipse,
   diamond,
   triangle,
+  polygon,
   line,
   arrow,
   freehand,
@@ -24,6 +25,8 @@ extension ShapeTypeExtension on ShapeType {
         return 'Diamond';
       case ShapeType.triangle:
         return 'Triangle';
+      case ShapeType.polygon:
+        return 'Polygon';
       case ShapeType.line:
         return 'Line';
       case ShapeType.arrow:

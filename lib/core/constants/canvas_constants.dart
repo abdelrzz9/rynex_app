@@ -2,7 +2,7 @@ class CanvasConstants {
   const CanvasConstants._();
 
   static const double minZoom = 0.1;
-  static const double maxZoom = 10.0;
+  static const double maxZoom = 64.0;
   static const double defaultZoom = 1.0;
   static const double zoomStep = 0.1;
   static const double scrollZoomSpeed = 0.001;
@@ -18,4 +18,7 @@ class CanvasConstants {
   static const int maxFileSize = 50 * 1024 * 1024;
   static const int maxFreehandPoints = 500;
   static const double freehandSimplifyEpsilon = 2.0;
+  static const int historyLimit = 100;
+  static const double zoomInFactor = 1.25;
+  static const double zoomOutFactor = 0.8;
 }

@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/di/injection_container.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/export_service.dart';
+import '../../../../core/utils/uuid_generator.dart';
 import '../../../history/presentation/providers/history_provider.dart';
+import '../../../projects/domain/entities/project.dart';
+import '../../../projects/presentation/providers/active_project_provider.dart';
+import '../../../projects/presentation/providers/project_list_provider.dart';
 import '../../../shapes/presentation/providers/shape_provider.dart';
 import '../providers/canvas_provider.dart';
 
@@ -14,31 +20,27 @@ class TopToolbar extends ConsumerWidget {
     final canvasState = ref.watch(canvasProvider);
     final canUndo = ref.watch(canUndoProvider);
     final canRedo = ref.watch(canRedoProvider);
+    final project = ref.watch(activeProjectProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? Colors.grey.shade900 : Colors.white;
-    final fgColor = isDark ? Colors.white70 : Colors.black87;
+
+    final bgColor = isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final fgColor = isDark ? AppColors.textPrimary : AppColors.textPrimaryLight;
+    final borderColor = isDark ? AppColors.darkBorder : AppColors.lightBorder;
 
     final screenWidth = MediaQuery.sizeOf(context).width;
     final isMobile = screenWidth < 600;
-    final isTablet = screenWidth >= 600 && screenWidth < 1200;
 
-    final iconSize = isMobile ? 18.0 : isTablet ? 20.0 : 22.0;
-    final buttonSize = isMobile ? 48.0 : isTablet ? 44.0 : 40.0;
-    final toolbarHeight = isMobile ? 56.0 : isTablet ? 64.0 : 72.0;
-    final spacing = isMobile ? 2.0 : isTablet ? 4.0 : 6.0;
-    final horizontalPadding = isMobile ? 4.0 : isTablet ? 8.0 : 12.0;
+    final iconSize = isMobile ? 18.0 : 22.0;
+    final buttonSize = isMobile ? 40.0 : 44.0;
+    final toolbarHeight = isMobile ? 52.0 : 60.0;
+    final spacing = isMobile ? 2.0 : 6.0;
+    final horizontalPadding = isMobile ? 4.0 : 12.0;
 
     return Container(
       height: toolbarHeight,
       decoration: BoxDecoration(
         color: bgColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border(bottom: BorderSide(color: borderColor)),
       ),
       padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: Row(
@@ -51,104 +53,173 @@ class TopToolbar extends ConsumerWidget {
             constraints: BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
           ),
           if (screenWidth > 360) ...[
-            SizedBox(width: isMobile ? 2 : 4),
-            Text(
-              'Rynex Draw',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 14 : 16),
-            ),
-          ],
-          SizedBox(width: spacing),
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
+            const SizedBox(width: 4),
+            GestureDetector(
+              onDoubleTap: () => _showRenameDialog(context, ref, project?.name ?? ''),
               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  _IconButton(
-                    icon: Icons.undo,
-                    tooltip: 'Undo (Ctrl+Z)',
-                    enabled: canUndo,
-                    onTap: () => ref.read(historyProvider.notifier).undo(),
-                    iconSize: iconSize,
-                    buttonSize: buttonSize,
-                  ),
-                  _IconButton(
-                    icon: Icons.redo,
-                    tooltip: 'Redo (Ctrl+Y)',
-                    enabled: canRedo,
-                    onTap: () => ref.read(historyProvider.notifier).redo(),
-                    iconSize: iconSize,
-                    buttonSize: buttonSize,
-                  ),
-                  SizedBox(width: spacing + (isMobile ? 2 : 4)),
-                  Container(height: 24, width: 1, color: Colors.grey.shade400),
-                  SizedBox(width: spacing + (isMobile ? 2 : 4)),
-                  _IconButton(
-                    icon: Icons.zoom_out,
-                    tooltip: 'Zoom Out',
-                    enabled: true,
-                    onTap: () => ref.read(canvasProvider.notifier).zoomOut(Offset.zero),
-                    iconSize: iconSize,
-                    buttonSize: buttonSize,
-                  ),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: spacing),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: isMobile ? 100 : 200),
                     child: Text(
-                      '${(canvasState.transform.zoom * 100).round()}%',
-                      style: TextStyle(fontSize: isMobile ? 12 : 13, color: fgColor),
+                      project?.name ?? 'Untitled Drawing',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: isMobile ? 13 : 15,
+                        color: fgColor,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  _IconButton(
-                    icon: Icons.zoom_in,
-                    tooltip: 'Zoom In',
-                    enabled: true,
-                    onTap: () => ref.read(canvasProvider.notifier).zoomIn(Offset.zero),
-                    iconSize: iconSize,
-                    buttonSize: buttonSize,
-                  ),
-                  _IconButton(
-                    icon: Icons.fit_screen,
-                    tooltip: 'Zoom to Fit',
-                    enabled: true,
-                    onTap: () {
-                      final shapes = ref.read(shapeListProvider);
-                      if (shapes.isEmpty) {
-                        ref.read(canvasProvider.notifier).resetViewport();
-                        return;
-                      }
-                      final bounds = shapes.map((s) => s.rotatedBoundingBox).reduce(
-                        (a, b) => a.expandToInclude(b),
-                      );
-                      ref.read(canvasProvider.notifier).zoomToFit(
-                        MediaQuery.of(context).size,
-                        bounds,
-                      );
-                    },
-                    iconSize: iconSize,
-                    buttonSize: buttonSize,
-                  ),
-                  SizedBox(width: spacing + (isMobile ? 2 : 4)),
-                  Container(height: 24, width: 1, color: Colors.grey.shade400),
-                  SizedBox(width: spacing + (isMobile ? 2 : 4)),
-                  _IconButton(
-                    icon: canvasState.showGrid ? Icons.grid_on : Icons.grid_off,
-                    tooltip: 'Toggle Grid (Ctrl+Shift+G)',
-                    enabled: true,
-                    onTap: () => ref.read(canvasProvider.notifier).toggleGrid(),
-                    iconSize: iconSize,
-                    buttonSize: buttonSize,
-                  ),
-                  SizedBox(width: spacing),
-                  IconButton(
-                    icon: Icon(Icons.more_vert, color: fgColor, size: 20),
-                    tooltip: 'More',
-                    onPressed: () => _showMoreMenu(context, ref),
-                    padding: EdgeInsets.zero,
-                    constraints: BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
-                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.edit, size: 12, color: fgColor.withValues(alpha: 0.5)),
                 ],
               ),
             ),
+          ],
+          const Spacer(),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: [
+                _IconButton(
+                  icon: Icons.undo,
+                  tooltip: 'Undo (Ctrl+Z)',
+                  enabled: canUndo,
+                  onTap: () => ref.read(historyProvider.notifier).undo(),
+                  iconSize: iconSize,
+                  buttonSize: buttonSize,
+                  fgColor: fgColor,
+                ),
+                _IconButton(
+                  icon: Icons.redo,
+                  tooltip: 'Redo (Ctrl+Y)',
+                  enabled: canRedo,
+                  onTap: () => ref.read(historyProvider.notifier).redo(),
+                  iconSize: iconSize,
+                  buttonSize: buttonSize,
+                  fgColor: fgColor,
+                ),
+                SizedBox(width: spacing),
+                Container(height: 24, width: 1, color: borderColor),
+                SizedBox(width: spacing),
+                Text(
+                  '${(canvasState.transform.zoom * 100).round()}%',
+                  style: TextStyle(fontSize: isMobile ? 12 : 13, color: fgColor),
+                ),
+                _IconButton(
+                  icon: Icons.zoom_out,
+                  tooltip: 'Zoom Out',
+                  enabled: true,
+                  onTap: () => ref.read(canvasProvider.notifier).zoomOut(Offset.zero),
+                  iconSize: iconSize,
+                  buttonSize: buttonSize,
+                  fgColor: fgColor,
+                ),
+                _IconButton(
+                  icon: Icons.zoom_in,
+                  tooltip: 'Zoom In',
+                  enabled: true,
+                  onTap: () => ref.read(canvasProvider.notifier).zoomIn(Offset.zero),
+                  iconSize: iconSize,
+                  buttonSize: buttonSize,
+                  fgColor: fgColor,
+                ),
+                _IconButton(
+                  icon: Icons.fit_screen,
+                  tooltip: 'Zoom to Fit',
+                  enabled: true,
+                  onTap: () {
+                    final shapes = ref.read(shapeListProvider);
+                    if (shapes.isEmpty) {
+                      ref.read(canvasProvider.notifier).resetViewport();
+                      return;
+                    }
+                    final bounds = shapes.map((s) => s.rotatedBoundingBox).reduce(
+                      (a, b) => a.expandToInclude(b),
+                    );
+                    ref.read(canvasProvider.notifier).zoomToFit(
+                      MediaQuery.of(context).size,
+                      bounds,
+                    );
+                  },
+                  iconSize: iconSize,
+                  buttonSize: buttonSize,
+                  fgColor: fgColor,
+                ),
+                SizedBox(width: spacing),
+                Container(height: 24, width: 1, color: borderColor),
+                SizedBox(width: spacing),
+                _IconButton(
+                  icon: canvasState.showGrid ? Icons.grid_on : Icons.grid_off,
+                  tooltip: 'Toggle Grid',
+                  enabled: true,
+                  onTap: () => ref.read(canvasProvider.notifier).toggleGrid(),
+                  iconSize: iconSize,
+                  buttonSize: buttonSize,
+                  fgColor: fgColor,
+                ),
+                SizedBox(width: spacing),
+                IconButton(
+                  icon: Icon(Icons.more_vert, color: fgColor, size: 20),
+                  tooltip: 'More',
+                  onPressed: () => _showMoreMenu(context, ref),
+                  padding: EdgeInsets.zero,
+                  constraints: BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRenameDialog(BuildContext context, WidgetRef ref, String currentName) {
+    final controller = TextEditingController(text: currentName);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? AppColors.darkCard
+            : AppColors.lightCard,
+        title: Text(
+          'Rename Project',
+          style: TextStyle(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? AppColors.textPrimary
+                : AppColors.textPrimaryLight,
+          ),
+        ),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: 'Project name',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          style: TextStyle(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? AppColors.textPrimary
+                : AppColors.textPrimaryLight,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (controller.text.trim().isNotEmpty) {
+                ref.read(activeProjectProvider.notifier).updateName(controller.text.trim());
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text('Rename'),
           ),
         ],
       ),
@@ -160,12 +231,40 @@ class TopToolbar extends ConsumerWidget {
       context: context,
       position: const RelativeRect.fromLTRB(1000, 50, 0, 0),
       items: [
+        const PopupMenuItem(value: 'save', child: Text('Save Project')),
+        const PopupMenuItem(value: 'duplicate', child: Text('Duplicate Project')),
         const PopupMenuItem(value: 'clear', child: Text('Clear Canvas')),
         const PopupMenuItem(value: 'export_png', child: Text('Export as PNG')),
-        const PopupMenuItem(value: 'export_json', child: Text('Export as JSON')),
+        const PopupMenuItem(value: 'export_jpg', child: Text('Export as JPG')),
+        const PopupMenuItem(value: 'export_pdf', child: Text('Export as PDF')),
       ],
     ).then((value) async {
-      if (value == 'clear') {
+      if (value == 'save') {
+        await ref.read(activeProjectProvider.notifier).saveNow();
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Project saved'), duration: Duration(seconds: 1)),
+          );
+        }
+      } else if (value == 'duplicate') {
+        final project = ref.read(activeProjectProvider);
+        if (project == null) return;
+        final id = UuidGenerator.generate();
+        final dup = Project(
+          id: id,
+          name: '${project.name} (Copy)',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          shapes: project.shapes,
+        );
+        await ref.read(projectStorageServiceProvider).saveProject(dup);
+        await ref.read(projectListProvider.notifier).loadProjects();
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Project duplicated'), duration: Duration(seconds: 1)),
+          );
+        }
+      } else if (value == 'clear') {
         ref.read(shapeListProvider.notifier).clearAll();
         ref.read(historyProvider.notifier).clear();
       } else if (value == 'export_png') {
@@ -174,10 +273,18 @@ class TopToolbar extends ConsumerWidget {
         final shapes = ref.read(shapeListProvider);
         if (shapes.isEmpty) return;
         await ExportService().exportPng(shapes, ExportService.calculateContentBounds(shapes), repaintKey);
-      } else if (value == 'export_json') {
+      } else if (value == 'export_jpg') {
+        final repaintKey = ref.read(canvasRepaintKeyProvider);
+        if (repaintKey == null) return;
         final shapes = ref.read(shapeListProvider);
         if (shapes.isEmpty) return;
-        await ExportService().exportJson(shapes);
+        await ExportService().exportJpg(shapes, ExportService.calculateContentBounds(shapes), repaintKey);
+      } else if (value == 'export_pdf') {
+        final repaintKey = ref.read(canvasRepaintKeyProvider);
+        if (repaintKey == null) return;
+        final shapes = ref.read(shapeListProvider);
+        if (shapes.isEmpty) return;
+        await ExportService().exportPdf(shapes, ExportService.calculateContentBounds(shapes), repaintKey);
       }
     });
   }
@@ -190,6 +297,7 @@ class _IconButton extends StatelessWidget {
   final VoidCallback onTap;
   final double iconSize;
   final double buttonSize;
+  final Color fgColor;
 
   const _IconButton({
     required this.icon,
@@ -198,6 +306,7 @@ class _IconButton extends StatelessWidget {
     required this.onTap,
     this.iconSize = 20,
     this.buttonSize = 40,
+    required this.fgColor,
   });
 
   @override
@@ -205,7 +314,7 @@ class _IconButton extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: IconButton(
-        icon: Icon(icon, size: iconSize),
+        icon: Icon(icon, size: iconSize, color: enabled ? fgColor : fgColor.withValues(alpha: 0.3)),
         onPressed: enabled ? onTap : null,
         padding: EdgeInsets.zero,
         constraints: BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
