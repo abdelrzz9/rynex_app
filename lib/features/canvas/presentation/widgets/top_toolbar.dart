@@ -221,7 +221,7 @@ class TopToolbar extends ConsumerWidget {
   }
 
   // UX FIX 4 — popup position from button's RenderBox
-  void _showMoreMenu(BuildContext buttonContext, WidgetRef ref) {
+  Future<void> _showMoreMenu(BuildContext buttonContext, WidgetRef ref) async {
     final renderBox = buttonContext.findRenderObject() as RenderBox?;
     if (renderBox == null || !renderBox.hasSize) return;
     final overlay = Overlay.of(buttonContext);
@@ -235,7 +235,7 @@ class TopToolbar extends ConsumerWidget {
       Offset.zero & overlayRenderBox.size,
     );
 
-    showMenu(
+    final value = await showMenu(
       context: buttonContext,
       position: position,
       items: [
@@ -247,45 +247,46 @@ class TopToolbar extends ConsumerWidget {
         const PopupMenuItem(value: 'export_jpg', child: Text('Export as JPG')),
         const PopupMenuItem(value: 'export_pdf', child: Text('Export as PDF')),
       ],
-    ).then((value) async {
-      if (value == 'canvas_size') {
-        _showCanvasSizeDialog(buttonContext, ref);
-      } else if (value == 'save') {
-        await ref.read(activeProjectProvider.notifier).saveNow();
-        if (buttonContext.mounted) {
-          ScaffoldMessenger.of(buttonContext).showSnackBar(
-            const SnackBar(content: Text('Project saved'), duration: Duration(seconds: 1)),
-          );
-        }
-      } else if (value == 'duplicate') {
-        final project = ref.read(activeProjectProvider);
-        if (project == null) return;
-        final id = UuidGenerator.generate();
-        final dup = Project(
-          id: id,
-          name: '${project.name} (Copy)',
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-          shapes: project.shapes,
+    );
+    if (!buttonContext.mounted) return;
+    if (value == 'canvas_size') {
+      _showCanvasSizeDialog(buttonContext, ref);
+    } else if (value == 'save') {
+      await ref.read(activeProjectProvider.notifier).saveNow();
+      if (buttonContext.mounted) {
+        ScaffoldMessenger.of(buttonContext).showSnackBar(
+          const SnackBar(content: Text('Project saved'), duration: Duration(seconds: 1)),
         );
-        await ref.read(projectStorageServiceProvider).saveProject(dup);
-        await ref.read(projectListProvider.notifier).loadProjects();
-        if (buttonContext.mounted) {
-          ScaffoldMessenger.of(buttonContext).showSnackBar(
-            const SnackBar(content: Text('Project duplicated'), duration: Duration(seconds: 1)),
-          );
-        }
-      } else if (value == 'clear') {
-        final confirmed = await _confirmDestructiveAction(
-          buttonContext,
-          title: 'Clear Canvas',
-          message: 'This will remove all shapes and cannot be undone.',
-          confirmLabel: 'Clear',
+      }
+    } else if (value == 'duplicate') {
+      final project = ref.read(activeProjectProvider);
+      if (project == null) return;
+      final id = UuidGenerator.generate();
+      final dup = Project(
+        id: id,
+        name: '${project.name} (Copy)',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        shapes: project.shapes,
+      );
+      await ref.read(projectStorageServiceProvider).saveProject(dup);
+      await ref.read(projectListProvider.notifier).loadProjects();
+      if (buttonContext.mounted) {
+        ScaffoldMessenger.of(buttonContext).showSnackBar(
+          const SnackBar(content: Text('Project duplicated'), duration: Duration(seconds: 1)),
         );
-        if (!confirmed) return;
-        ref.read(shapeListProvider.notifier).clearAll();
-        ref.read(historyProvider.notifier).clear();
-      } else if (value == 'export_png') {
+      }
+    } else if (value == 'clear') {
+      final confirmed = await _confirmDestructiveAction(
+        buttonContext,
+        title: 'Clear Canvas',
+        message: 'This will remove all shapes and cannot be undone.',
+        confirmLabel: 'Clear',
+      );
+      if (!confirmed) return;
+      ref.read(shapeListProvider.notifier).clearAll();
+      ref.read(historyProvider.notifier).clear();
+    } else if (value == 'export_png') {
         final repaintKey = ref.read(canvasRepaintKeyProvider);
         if (repaintKey == null) return;
         final shapes = ref.read(shapeListProvider);
@@ -316,7 +317,6 @@ class TopToolbar extends ConsumerWidget {
           canvasWidth: cs.canvasWidth, canvasHeight: cs.canvasHeight, transform: cs.transform,
         );
       }
-    });
   }
 }
 

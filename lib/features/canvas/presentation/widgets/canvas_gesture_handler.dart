@@ -506,7 +506,7 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
       case DrawingTool.triangle:
         shape = TriangleShape(id: id, boundingBox: normalizedRect, style: style, layer: _activeLayerInfo());
       case DrawingTool.polygon:
-        shape = PolygonShape(id: id, boundingBox: normalizedRect, style: style, layer: _activeLayerInfo(), sides: 6);
+        shape = PolygonShape(id: id, boundingBox: normalizedRect, style: style, layer: _activeLayerInfo());
       case DrawingTool.line:
         shape = LineShape(id: id, startPoint: _drawStart!, endPoint: _drawCurrent!, style: style, layer: _activeLayerInfo());
       case DrawingTool.arrow:

@@ -50,11 +50,9 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.light,
       scaffoldBackgroundColor: AppColors.lightBg,
-      colorScheme: ColorScheme.light(
+      colorScheme: const ColorScheme.light(
         primary: AppColors.primaryPurple,
-        onPrimary: Colors.white,
         secondary: AppColors.primaryPurpleLight,
-        surface: AppColors.lightSurface,
         onSurface: AppColors.lightTextPrimary,
         outline: AppColors.lightBorder,
       ),
@@ -84,12 +82,11 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: AppColors.darkBg,
-      colorScheme: ColorScheme.dark(
+      colorScheme: const ColorScheme.dark(
         primary: AppColors.primaryPurpleDark,
         onPrimary: Colors.white,
         secondary: AppColors.primaryPurpleLight,
         surface: AppColors.darkSurface,
-        onSurface: AppColors.darkTextPrimary,
         outline: AppColors.darkBorder,
       ),
       cardColor: AppColors.darkCard,

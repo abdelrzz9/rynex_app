@@ -165,21 +165,28 @@ class _HomePageState extends ConsumerState<HomePage> {
           children: [
             const Text('Theme', style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
-            ...ThemeMode.values.map((mode) {
-              final label = switch (mode) { ThemeMode.system => 'Follow System', ThemeMode.light => 'Light', ThemeMode.dark => 'Dark' };
-              return RadioListTile<ThemeMode>(
-                title: Text(label),
-                value: mode,
-                groupValue: settings.themeMode,
-                onChanged: (v) {
-                  if (v != null) {
-                    ref.read(settingsProvider.notifier).setThemeMode(v);
-                    Navigator.pop(ctx);
-                  }
-                },
-                dense: true,
-              );
-            }),
+            RadioGroup<ThemeMode>(
+              groupValue: settings.themeMode,
+              onChanged: (v) {
+                if (v == null) return;
+                ref.read(settingsProvider.notifier).setThemeMode(v);
+                Navigator.pop(ctx);
+              },
+              child: Column(
+                children: ThemeMode.values.map((mode) {
+                  final label = switch (mode) {
+                    ThemeMode.system => 'Follow System',
+                    ThemeMode.light => 'Light',
+                    ThemeMode.dark => 'Dark',
+                  };
+                  return RadioListTile<ThemeMode>(
+                    title: Text(label),
+                    value: mode,
+                    dense: true,
+                  );
+                }).toList(),
+              ),
+            ),
             const SizedBox(height: 12),
             Text('Canvas Size: ${settings.canvasSizeLabel} (${settings.canvasWidth}\u00D7${settings.canvasHeight})',
                 style: const TextStyle(fontSize: 13)),
