@@ -38,20 +38,48 @@ class _CanvasEditorPageState extends ConsumerState<CanvasEditorPage> {
     final isMobile = screenWidth < 600;
     final isTablet = screenWidth >= 600 && screenWidth < 1200;
     final showSidePanels = screenWidth >= 1200;
+    final hasUnsavedChanges = ref.watch(canUndoProvider);
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? AppColors.darkBg
-          : AppColors.lightBg,
-      body: Column(
-        children: [
-          const TopToolbar(),
-          Expanded(
-            child: isMobile
-                ? _buildMobileLayout()
-                : _buildDesktopLayout(isTablet, showSidePanels),
+    return PopScope(
+      canPop: !hasUnsavedChanges,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final result = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Unsaved changes'),
+            content: const Text('Do you want to save before leaving?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Discard'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Save'),
+              ),
+            ],
           ),
-        ],
+        );
+        if (result == true && context.mounted) {
+          await ref.read(activeProjectProvider.notifier).saveNow();
+        }
+        if (context.mounted) Navigator.of(context).pop();
+      },
+      child: Scaffold(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? AppColors.darkBg
+            : AppColors.lightBg,
+        body: Column(
+          children: [
+            const TopToolbar(),
+            Expanded(
+              child: isMobile
+                  ? _buildMobileLayout()
+                  : _buildDesktopLayout(isTablet, showSidePanels),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -119,15 +147,22 @@ class _CanvasEditorPageState extends ConsumerState<CanvasEditorPage> {
     );
   }
 
+  // UX FIX 1 — touch targets: minimum 48dp tap area
   Widget _quickButton(IconData icon, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(6),
-      child: Container(
-        width: 40,
-        height: 40,
-        alignment: Alignment.center,
-        child: Icon(icon, size: 20),
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Center(
+          child: Container(
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
+            child: Icon(icon, size: 20),
+          ),
+        ),
       ),
     );
   }

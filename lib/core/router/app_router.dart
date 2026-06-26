@@ -13,11 +13,13 @@ final appRouter = GoRouter(
       path: '/',
       name: 'home',
       builder: (context, state) => const HomePage(),
-    ),
-    GoRoute(
-      path: '/editor',
-      name: 'editor',
-      builder: (context, state) => const CanvasEditorPage(),
+      routes: [
+        GoRoute(
+          path: 'editor',
+          name: 'editor',
+          builder: (context, state) => const CanvasEditorPage(),
+        ),
+      ],
     ),
   ],
 );

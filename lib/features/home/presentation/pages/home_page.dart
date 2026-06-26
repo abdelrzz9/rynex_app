@@ -22,12 +22,29 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
+  bool _isProjectListLoading = true;
+  String? _projectListError;
+  bool _isCreatingProject = false;
+  String? _openingProjectId;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(projectListProvider.notifier).loadProjects();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadProjects());
+  }
+
+  Future<void> _loadProjects() async {
+    setState(() {
+      _isProjectListLoading = true;
+      _projectListError = null;
     });
+    try {
+      await ref.read(projectListProvider.notifier).loadProjects();
+    } catch (e) {
+      if (mounted) setState(() => _projectListError = 'Failed to load projects.');
+    } finally {
+      if (mounted) setState(() => _isProjectListLoading = false);
+    }
   }
 
   @override
@@ -61,10 +78,20 @@ class _HomePageState extends ConsumerState<HomePage> {
                           const Spacer(flex: 2),
                           _LogoSection(primary: primary),
                           const SizedBox(height: 32),
-                          _NewProjectButton(primary: primary, onTap: _createNewProject),
+                          // UX FIX 2 — loading indicator while creating
+                          _NewProjectButton(
+                            primary: primary,
+                            onTap: _createNewProject,
+                            isLoading: _isCreatingProject,
+                          ),
                           const SizedBox(height: 32),
+                          // UX FIX 2 — loading/empty/error states
                           _RecentProjectsSection(
                             projects: projects,
+                            isLoading: _isProjectListLoading,
+                            errorMessage: _projectListError,
+                            onRetry: _loadProjects,
+                            openingProjectId: _openingProjectId,
                             primary: primary,
                             primaryLight: primaryLight,
                             textPrimary: textPrimary,
@@ -89,29 +116,39 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Future<void> _createNewProject() async {
-    final id = UuidGenerator.generate();
-    final now = DateTime.now();
-    final project = Project(id: id, name: 'Untitled Drawing', createdAt: now, updatedAt: now);
+    setState(() => _isCreatingProject = true);
+    try {
+      final id = UuidGenerator.generate();
+      final now = DateTime.now();
+      final project = Project(id: id, name: 'Untitled Drawing', createdAt: now, updatedAt: now);
 
-    ref.read(shapeListProvider.notifier).clearAll();
-    ref.read(historyProvider.notifier).clear();
-    ref.read(selectionProvider.notifier).deselectAll();
-    ref.read(canvasProvider.notifier).resetViewport();
-    await ref.read(activeProjectProvider.notifier).open(project);
-    if (!mounted) return;
-    context.pushNamed('editor');
+      ref.read(shapeListProvider.notifier).clearAll();
+      ref.read(historyProvider.notifier).clear();
+      ref.read(selectionProvider.notifier).deselectAll();
+      ref.read(canvasProvider.notifier).resetViewport();
+      await ref.read(activeProjectProvider.notifier).open(project);
+      if (!mounted) return;
+      context.pushNamed('editor');
+    } finally {
+      if (mounted) setState(() => _isCreatingProject = false);
+    }
   }
 
   Future<void> _openProject(String id) async {
-    ref.read(shapeListProvider.notifier).clearAll();
-    ref.read(historyProvider.notifier).clear();
-    ref.read(selectionProvider.notifier).deselectAll();
-    await ref.read(activeProjectProvider.notifier).load(id);
-    final project = ref.read(activeProjectProvider);
-    if (project != null) {
-      await ref.read(projectStorageServiceProvider).saveProject(project);
-      if (!mounted) return;
-      context.pushNamed('editor');
+    setState(() => _openingProjectId = id);
+    try {
+      ref.read(shapeListProvider.notifier).clearAll();
+      ref.read(historyProvider.notifier).clear();
+      ref.read(selectionProvider.notifier).deselectAll();
+      await ref.read(activeProjectProvider.notifier).load(id);
+      final project = ref.read(activeProjectProvider);
+      if (project != null) {
+        await ref.read(projectStorageServiceProvider).saveProject(project);
+        if (!mounted) return;
+        context.pushNamed('editor');
+      }
+    } finally {
+      if (mounted) setState(() => _openingProjectId = null);
     }
   }
 
@@ -175,11 +212,12 @@ class _SettingsButton extends StatelessWidget {
               shape: BoxShape.circle,
               border: Border.all(color: border),
             ),
+            // UX FIX 1 — touch targets: minimum 48dp tap area
             child: IconButton(
               icon: Icon(Icons.settings, color: primary, size: 22),
               onPressed: onTap,
               padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
             ),
           ),
         ],
@@ -232,8 +270,13 @@ class _LogoSection extends StatelessWidget {
 class _NewProjectButton extends StatelessWidget {
   final Color primary;
   final VoidCallback onTap;
+  final bool isLoading;
 
-  const _NewProjectButton({required this.primary, required this.onTap});
+  const _NewProjectButton({
+    required this.primary,
+    required this.onTap,
+    this.isLoading = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -243,7 +286,7 @@ class _NewProjectButton extends StatelessWidget {
         width: double.infinity,
         height: 56,
         child: ElevatedButton(
-          onPressed: onTap,
+          onPressed: isLoading ? null : onTap,
           style: ElevatedButton.styleFrom(
             backgroundColor: primary,
             foregroundColor: Colors.white,
@@ -252,10 +295,12 @@ class _NewProjectButton extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
             ),
           ),
-          child: const Text(
-            '+ New Project',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
+          child: isLoading
+              ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Text(
+                  '+ New Project',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
         ),
       ),
     );
@@ -264,6 +309,10 @@ class _NewProjectButton extends StatelessWidget {
 
 class _RecentProjectsSection extends StatelessWidget {
   final List<ProjectSummary> projects;
+  final bool isLoading;
+  final String? errorMessage;
+  final VoidCallback? onRetry;
+  final String? openingProjectId;
   final Color primary;
   final Color primaryLight;
   final Color textPrimary;
@@ -274,6 +323,10 @@ class _RecentProjectsSection extends StatelessWidget {
 
   const _RecentProjectsSection({
     required this.projects,
+    this.isLoading = false,
+    this.errorMessage,
+    this.onRetry,
+    this.openingProjectId,
     required this.primary,
     required this.primaryLight,
     required this.textPrimary,
@@ -285,7 +338,44 @@ class _RecentProjectsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (projects.isEmpty) return const SizedBox.shrink();
+    if (isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 48),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (errorMessage != null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+        child: Column(
+          children: [
+            Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
+            const SizedBox(height: 12),
+            Text(errorMessage!, textAlign: TextAlign.center, style: TextStyle(color: textSecondary, fontSize: 14)),
+            const SizedBox(height: 16),
+            if (onRetry != null)
+              TextButton.icon(
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Retry'),
+                onPressed: onRetry,
+              ),
+          ],
+        ),
+      );
+    }
+    if (projects.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 48),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.folder_open, size: 48, color: textSecondary),
+            const SizedBox(height: 12),
+            Text('No recent projects', style: TextStyle(color: textSecondary, fontSize: 14)),
+          ],
+        ),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -306,6 +396,7 @@ class _RecentProjectsSection extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 10),
               child: _ProjectCard(
                 project: p,
+                isOpening: openingProjectId == p.id,
                 primaryLight: primaryLight,
                 textPrimary: textPrimary,
                 textSecondary: textSecondary,
@@ -323,6 +414,7 @@ class _RecentProjectsSection extends StatelessWidget {
 
 class _ProjectCard extends StatelessWidget {
   final ProjectSummary project;
+  final bool isOpening;
   final Color primaryLight;
   final Color textPrimary;
   final Color textSecondary;
@@ -332,6 +424,7 @@ class _ProjectCard extends StatelessWidget {
 
   const _ProjectCard({
     required this.project,
+    this.isOpening = false,
     required this.primaryLight,
     required this.textPrimary,
     required this.textSecondary,
@@ -346,7 +439,7 @@ class _ProjectCard extends StatelessWidget {
       color: surface,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        onTap: onTap,
+        onTap: isOpening ? null : onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
           height: 90,
@@ -363,7 +456,9 @@ class _ProjectCard extends StatelessWidget {
                   color: primaryLight,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.image_outlined, size: 28, color: Color(0xFF6C4DD3)),
+                child: isOpening
+                    ? const Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)))
+                    : const Icon(Icons.image_outlined, size: 28, color: Color(0xFF6C4DD3)),
               ),
               Expanded(
                 child: Padding(
@@ -396,7 +491,9 @@ class _ProjectCard extends StatelessWidget {
               ),
               Padding(
                 padding: const EdgeInsets.only(right: 16),
-                child: Icon(Icons.chevron_right, size: 22, color: textSecondary),
+                child: isOpening
+                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))
+                    : Icon(Icons.chevron_right, size: 22, color: textSecondary),
               ),
             ],
           ),

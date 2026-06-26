@@ -178,23 +178,31 @@ class _ToolButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: '${tool.label} (${tool.shortcutLabel})',
-      preferBelow: false,
-      child: Material(
-        color: isActive ? selectedColor : Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
-        child: InkWell(
-          onTap: onTap,
+    final tapSize = buttonSize >= 48 ? buttonSize : 48.0;
+    // UX FIX 1 — touch targets: minimum 48dp tap area
+    return SizedBox(
+      width: tapSize,
+      height: tapSize,
+      child: Tooltip(
+        message: '${tool.label} (${tool.shortcutLabel})',
+        preferBelow: false,
+        child: Material(
+          color: isActive ? selectedColor : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
-          child: Container(
-            width: buttonSize,
-            height: buttonSize,
-            alignment: Alignment.center,
-            child: Icon(
-              icon,
-              size: iconSize,
-              color: isActive ? Theme.of(context).colorScheme.primary : iconColor,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: Center(
+              child: Container(
+                width: buttonSize,
+                height: buttonSize,
+                alignment: Alignment.center,
+                child: Icon(
+                  icon,
+                  size: iconSize,
+                  color: isActive ? Theme.of(context).colorScheme.primary : iconColor,
+                ),
+              ),
             ),
           ),
         ),

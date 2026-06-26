@@ -47,12 +47,14 @@ class TopToolbar extends ConsumerWidget {
       padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: Row(
         children: [
+          // UX FIX 1 — touch targets: minimum 48dp tap area
+          // Back: pop from nested /editor route to parent /
           IconButton(
             icon: const Icon(Icons.arrow_back, size: 20),
             tooltip: 'Back to Home',
-            onPressed: () => context.goNamed('home'),
+            onPressed: () => context.pop(),
             padding: EdgeInsets.zero,
-            constraints: BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
           ),
           if (screenWidth > 360) ...[
             const SizedBox(width: 4),
@@ -142,12 +144,15 @@ class TopToolbar extends ConsumerWidget {
                   fgColor: fgColor,
                 ),
                 SizedBox(width: spacing),
-                IconButton(
-                  icon: Icon(Icons.more_vert, color: fgColor, size: 20),
-                  tooltip: 'More',
-                  onPressed: () => _showMoreMenu(context, ref),
-                  padding: EdgeInsets.zero,
-                  constraints: BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
+                // UX FIX 1,4 — 48dp tap target + popup position from button RenderBox
+                Builder(
+                  builder: (buttonCtx) => IconButton(
+                    icon: Icon(Icons.more_vert, color: fgColor, size: 20),
+                    tooltip: 'More',
+                    onPressed: () => _showMoreMenu(buttonCtx, ref),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                  ),
                 ),
               ],
             ),
@@ -187,10 +192,52 @@ class TopToolbar extends ConsumerWidget {
     );
   }
 
-  void _showMoreMenu(BuildContext context, WidgetRef ref) {
-    showMenu(
+  // UX FIX 3 — reusable destructive confirmation dialog
+  static Future<bool> _confirmDestructiveAction(
+    BuildContext context, {
+    required String title,
+    required String message,
+    required String confirmLabel,
+  }) async {
+    final result = await showDialog<bool>(
       context: context,
-      position: const RelativeRect.fromLTRB(1000, 50, 0, 0),
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: Text(confirmLabel),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
+  // UX FIX 4 — popup position from button's RenderBox
+  void _showMoreMenu(BuildContext buttonContext, WidgetRef ref) {
+    final renderBox = buttonContext.findRenderObject() as RenderBox?;
+    if (renderBox == null || !renderBox.hasSize) return;
+    final overlay = Overlay.of(buttonContext);
+    final overlayRenderBox = overlay.context.findRenderObject() as RenderBox?;
+    if (overlayRenderBox == null) return;
+    final position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        renderBox.localToGlobal(Offset.zero, ancestor: overlayRenderBox),
+        renderBox.localToGlobal(renderBox.size.bottomRight(Offset.zero), ancestor: overlayRenderBox),
+      ),
+      Offset.zero & overlayRenderBox.size,
+    );
+
+    showMenu(
+      context: buttonContext,
+      position: position,
       items: [
         const PopupMenuItem(value: 'save', child: Text('Save Project')),
         const PopupMenuItem(value: 'duplicate', child: Text('Duplicate Project')),
@@ -202,11 +249,11 @@ class TopToolbar extends ConsumerWidget {
       ],
     ).then((value) async {
       if (value == 'canvas_size') {
-        _showCanvasSizeDialog(context, ref);
+        _showCanvasSizeDialog(buttonContext, ref);
       } else if (value == 'save') {
         await ref.read(activeProjectProvider.notifier).saveNow();
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+        if (buttonContext.mounted) {
+          ScaffoldMessenger.of(buttonContext).showSnackBar(
             const SnackBar(content: Text('Project saved'), duration: Duration(seconds: 1)),
           );
         }
@@ -223,12 +270,19 @@ class TopToolbar extends ConsumerWidget {
         );
         await ref.read(projectStorageServiceProvider).saveProject(dup);
         await ref.read(projectListProvider.notifier).loadProjects();
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+        if (buttonContext.mounted) {
+          ScaffoldMessenger.of(buttonContext).showSnackBar(
             const SnackBar(content: Text('Project duplicated'), duration: Duration(seconds: 1)),
           );
         }
       } else if (value == 'clear') {
+        final confirmed = await _confirmDestructiveAction(
+          buttonContext,
+          title: 'Clear Canvas',
+          message: 'This will remove all shapes and cannot be undone.',
+          confirmLabel: 'Clear',
+        );
+        if (!confirmed) return;
         ref.read(shapeListProvider.notifier).clearAll();
         ref.read(historyProvider.notifier).clear();
       } else if (value == 'export_png') {
@@ -287,13 +341,14 @@ class _IconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // UX FIX 1 — touch targets: minimum 48dp tap area
     return Tooltip(
       message: tooltip,
       child: IconButton(
         icon: Icon(icon, size: iconSize, color: enabled ? fgColor : fgColor.withValues(alpha: 0.3)),
         onPressed: enabled ? onTap : null,
         padding: EdgeInsets.zero,
-        constraints: BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
+        constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
       ),
     );
   }

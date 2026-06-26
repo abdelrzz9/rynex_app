@@ -417,15 +417,16 @@ class _ColorWheelPainter extends CustomPainter {
       ..addOval(Rect.fromCircle(center: center, radius: innerRadius));
     canvas.clipPath(ringPath);
 
+    // UX FIX 5 — HSVColor stops for accurate hue spectrum
     final shader = SweepGradient(
-      colors: const [
-        Color(0xFFFF0000),
-        Color(0xFFFFFF00),
-        Color(0xFF00FF00),
-        Color(0xFF00FFFF),
-        Color(0xFF0000FF),
-        Color(0xFFFF00FF),
-        Color(0xFFFF0000),
+      colors: [
+        HSVColor.fromAHSV(1, 0, 1, 1).toColor(),
+        HSVColor.fromAHSV(1, 60, 1, 1).toColor(),
+        HSVColor.fromAHSV(1, 120, 1, 1).toColor(),
+        HSVColor.fromAHSV(1, 180, 1, 1).toColor(),
+        HSVColor.fromAHSV(1, 240, 1, 1).toColor(),
+        HSVColor.fromAHSV(1, 300, 1, 1).toColor(),
+        HSVColor.fromAHSV(1, 360, 1, 1).toColor(),
       ],
     ).createShader(wheelRect);
     canvas.drawCircle(center, outerRadius, Paint()..shader = shader);
@@ -486,11 +487,7 @@ class _ColorWheelPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_ColorWheelPainter oldDelegate) {
-    return oldDelegate.hue != hue ||
-        oldDelegate.saturation != saturation ||
-        oldDelegate.brightness != brightness;
-  }
+  bool shouldRepaint(_ColorWheelPainter oldDelegate) => false;
 }
 
 class _GradientSlider extends StatefulWidget {
