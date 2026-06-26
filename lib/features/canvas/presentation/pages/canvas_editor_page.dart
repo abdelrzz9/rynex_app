@@ -66,7 +66,6 @@ class _CanvasEditorPageState extends ConsumerState<CanvasEditorPage> {
             ? AppColors.darkBg
             : AppColors.lightBg,
         body: SafeArea(
-          top: true,
           child: Column(
             children: [
               const TopToolbar(),

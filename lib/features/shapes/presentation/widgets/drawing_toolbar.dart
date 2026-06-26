@@ -145,7 +145,7 @@ class DrawingToolbar extends ConsumerWidget {
     );
   }
 
-  void _pickColor(BuildContext context, WidgetRef ref, Color current, bool isMobile, void Function(Color) onPicked) async {
+  Future<void> _pickColor(BuildContext context, WidgetRef ref, Color current, bool isMobile, void Function(Color) onPicked) async {
     final result = await ColorPickerDialog.show(context, current);
     if (result != null) onPicked(result);
   }
