@@ -44,32 +44,39 @@ class TopToolbar extends ConsumerWidget {
       height: toolbarHeight,
       decoration: BoxDecoration(
         color: bgColor,
-        border: Border(bottom: BorderSide(color: borderColor)),
       ),
       padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: Row(
         children: [
-          // UX FIX 1 — touch targets: minimum 48dp tap area
-          // Back: pop from nested /editor route to parent /
-          IconButton(
-            icon: const Icon(Icons.arrow_back, size: 20),
-            tooltip: 'Back to Home',
-            onPressed: () => context.pop(),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-          ),
-          if (screenWidth > 360) ...[
-            const SizedBox(width: 4),
-            const CanvasNameEditor(),
-          ],
-          const Spacer(),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
+          // Left side: back button + project name
+          Flexible(
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                _IconButton(
-                  icon: Icons.undo,
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, size: 20),
+                  tooltip: 'Back to Home',
+                  onPressed: () => context.pop(),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                ),
+                if (screenWidth > 360) ...[
+                  const SizedBox(width: 4),
+                  const Flexible(child: CanvasNameEditor()),
+                ],
+              ],
+            ),
+          ),
+          SizedBox(width: spacing),
+          // Right side: scrollable tools
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                children: [
+                  _IconButton(
+                    icon: Icons.undo,
                   tooltip: 'Undo (Ctrl+Z)',
                   enabled: canUndo,
                   onTap: () => ref.read(historyProvider.notifier).undo(),
@@ -154,9 +161,10 @@ class TopToolbar extends ConsumerWidget {
                     onPressed: () => _showMoreMenu(buttonCtx, ref),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],

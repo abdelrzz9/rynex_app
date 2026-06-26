@@ -17,10 +17,10 @@ class AppColors {
   static const Color lightTextSecondary = Color(0xFF666666);
 
   // Dark theme
-  static const Color darkBg = Color(0xFF121212);
-  static const Color darkSurface = Color(0xFF1E1E24);
-  static const Color darkCard = Color(0xFF23232D);
-  static const Color darkBorder = Color(0xFF2E2E38);
+  static const Color darkBg = Color(0xFF1A1A2E);
+  static const Color darkSurface = Color(0xFF23233A);
+  static const Color darkCard = Color(0xFF2A2A42);
+  static const Color darkBorder = Color(0xFF3A3A52);
   static const Color darkTextPrimary = Color(0xFFFFFFFF);
   static const Color darkTextSecondary = Color(0xFFB0B0B0);
 
@@ -82,6 +82,7 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: AppColors.darkBg,
+      canvasColor: AppColors.darkBg,
       colorScheme: const ColorScheme.dark(
         primary: AppColors.primaryPurpleDark,
         onPrimary: Colors.white,
@@ -97,6 +98,18 @@ class AppTheme {
         centerTitle: true,
         backgroundColor: AppColors.darkSurface,
         foregroundColor: AppColors.darkTextPrimary,
+      ),
+      cardTheme: const CardThemeData(
+        color: AppColors.darkCard,
+        surfaceTintColor: Colors.transparent,
+      ),
+      dialogTheme: const DialogThemeData(
+        backgroundColor: AppColors.darkSurface,
+        surfaceTintColor: Colors.transparent,
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.darkSurface,
+        surfaceTintColor: Colors.transparent,
       ),
       iconTheme: const IconThemeData(
         color: AppColors.darkTextPrimary,

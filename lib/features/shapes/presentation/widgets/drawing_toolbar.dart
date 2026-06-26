@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/tool_constants.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../color_picker/presentation/widgets/color_picker_dialog.dart';
 import '../providers/active_tool_provider.dart';
 
 class DrawingToolbar extends ConsumerWidget {
@@ -10,6 +11,7 @@ class DrawingToolbar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeTool = ref.watch(activeToolProvider);
+    final style = ref.watch(activeStyleProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? AppColors.darkSurface : AppColors.lightSurface;
     final borderColor = isDark ? AppColors.darkBorder : AppColors.lightBorder;
@@ -23,6 +25,7 @@ class DrawingToolbar extends ConsumerWidget {
 
     final iconSize = isShort ? 18.0 : (isMobile ? 20.0 : 22.0);
     final buttonSize = isShort ? 38.0 : (isMobile ? 44.0 : 48.0);
+    final colorSwatchSize = isShort ? 20.0 : 24.0;
 
     const tools = _toolGroups;
 
@@ -48,6 +51,27 @@ class DrawingToolbar extends ConsumerWidget {
           ));
         }
       }
+      mobileChildren.add(Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        child: Container(width: 1, height: 24, color: borderColor),
+      ));
+      mobileChildren.add(_ColorSwatch(
+        color: style.strokeColor,
+        label: 'Stroke',
+        size: colorSwatchSize,
+        onTap: () => _pickColor(context, ref, style.strokeColor, isMobile, (c) {
+          ref.read(activeStyleProvider.notifier).setStrokeColor(c);
+        }),
+      ));
+      mobileChildren.add(const SizedBox(width: 4));
+      mobileChildren.add(_ColorSwatch(
+        color: style.fillColor,
+        label: 'Fill',
+        size: colorSwatchSize,
+        onTap: () => _pickColor(context, ref, style.fillColor, isMobile, (c) {
+          ref.read(activeStyleProvider.notifier).setFillColor(c);
+        }),
+      ));
       return Container(
         height: buttonSize + 8,
         decoration: BoxDecoration(
@@ -84,6 +108,24 @@ class DrawingToolbar extends ConsumerWidget {
         ));
       }
     }
+    desktopChildren.add(const Divider(height: 1));
+    desktopChildren.add(_ColorSwatch(
+      color: style.strokeColor,
+      label: 'Stroke',
+      size: colorSwatchSize,
+      onTap: () => _pickColor(context, ref, style.strokeColor, isMobile, (c) {
+        ref.read(activeStyleProvider.notifier).setStrokeColor(c);
+      }),
+    ));
+    desktopChildren.add(const SizedBox(height: 4));
+    desktopChildren.add(_ColorSwatch(
+      color: style.fillColor,
+      label: 'Fill',
+      size: colorSwatchSize,
+      onTap: () => _pickColor(context, ref, style.fillColor, isMobile, (c) {
+        ref.read(activeStyleProvider.notifier).setFillColor(c);
+      }),
+    ));
 
     return Container(
       decoration: BoxDecoration(
@@ -103,6 +145,11 @@ class DrawingToolbar extends ConsumerWidget {
     );
   }
 
+  void _pickColor(BuildContext context, WidgetRef ref, Color current, bool isMobile, void Function(Color) onPicked) async {
+    final result = await ColorPickerDialog.show(context, current);
+    if (result != null) onPicked(result);
+  }
+
   static const List<List<DrawingTool>> _toolGroups = [
     [DrawingTool.select, DrawingTool.hand],
     [DrawingTool.pencil, DrawingTool.pen, DrawingTool.marker, DrawingTool.brush],
@@ -116,7 +163,7 @@ class DrawingToolbar extends ConsumerWidget {
   IconData _toolIcon(DrawingTool tool) {
     switch (tool) {
       case DrawingTool.select:
-        return Icons.pan_tool_outlined;
+        return Icons.open_with;
       case DrawingTool.hand:
         return Icons.pan_tool;
       case DrawingTool.pencil:
@@ -152,6 +199,50 @@ class DrawingToolbar extends ConsumerWidget {
       case DrawingTool.image:
         return Icons.image_outlined;
     }
+  }
+}
+
+class _ColorSwatch extends StatelessWidget {
+  final Color color;
+  final String label;
+  final double size;
+  final VoidCallback onTap;
+
+  const _ColorSwatch({
+    required this.color,
+    required this.label,
+    required this.size,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: '$label color',
+      child: SizedBox(
+        width: size + 8,
+        height: size + 8,
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: Center(
+              child: Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  color: color,
+                  border: Border.all(color: Colors.grey.shade400),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

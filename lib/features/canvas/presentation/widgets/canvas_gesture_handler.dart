@@ -69,7 +69,7 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
       onScaleEnd: _onScaleEnd,
       onTapUp: _onTapUp,
       onDoubleTapDown: _onDoubleTapDown,
-      behavior: HitTestBehavior.translucent,
+      behavior: HitTestBehavior.opaque,
       child: widget.child,
     );
   }
@@ -201,7 +201,7 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
     final transform = ref.read(canvasTransformProvider);
     final screenRect = transform.worldToScreenRect(shape.rotatedBoundingBox);
 
-    const threshold = CanvasConstants.handleSize / 2 + 4;
+    const threshold = 22.0;
 
     final topLeft = screenRect.topLeft;
     final topCenter = Offset(screenRect.center.dx, screenRect.top);
@@ -221,7 +221,7 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
     if ((topLeft - screenPoint).distance <= threshold) return HandleType.topLeft;
 
     final rotationPos = Offset(screenRect.center.dx, screenRect.top - 24);
-    if ((rotationPos - screenPoint).distance <= CanvasConstants.rotationHandleSize / 2 + 4) {
+    if ((rotationPos - screenPoint).distance <= 22.0) {
       return HandleType.rotation;
     }
 

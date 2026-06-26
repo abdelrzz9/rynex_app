@@ -66,9 +66,9 @@ extension DrawingToolKey on DrawingTool {
   String get label {
     switch (this) {
       case DrawingTool.select:
-        return 'Select';
+        return 'Select & Move';
       case DrawingTool.hand:
-        return 'Hand';
+        return 'Pan canvas';
       case DrawingTool.pencil:
         return 'Pencil';
       case DrawingTool.pen:

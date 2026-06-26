@@ -9,9 +9,9 @@ class CanvasConstants {
   static const double gridSize = 20.0;
   static const int gridDivisions = 5;
   static const double snapThreshold = 10.0;
-  static const double handleSize = 10.0;
-  static const double rotationHandleSize = 14.0;
-  static const double hitTestThreshold = 5.0;
+  static const double handleSize = 22.0;
+  static const double rotationHandleSize = 22.0;
+  static const double hitTestThreshold = 22.0;
   static const double cullingPadding = 200.0;
   static const int maxRecentColors = 10;
   static const int maxImageDimension = 4096;

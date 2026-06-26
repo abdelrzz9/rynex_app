@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../history/presentation/providers/history_provider.dart';
 import '../../../layers/presentation/widgets/layer_panel.dart';
@@ -53,47 +54,29 @@ class _CanvasEditorPageState extends ConsumerState<CanvasEditorPage> {
     final isMobile = screenWidth < 600;
     final isTablet = screenWidth >= 600 && screenWidth < 1200;
     final showSidePanels = screenWidth >= 1200;
-    final hasUnsavedChanges = ref.watch(canUndoProvider);
-
     return PopScope(
-      canPop: !hasUnsavedChanges,
+      canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
-        final result = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Unsaved changes'),
-            content: const Text('Do you want to save before leaving?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Discard'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Save'),
-              ),
-            ],
-          ),
-        );
-        if (result == true && context.mounted) {
-          await ref.read(activeProjectProvider.notifier).saveNow();
-        }
-        if (context.mounted) Navigator.of(context).pop();
+        await ref.read(activeProjectProvider.notifier).saveNow();
+        if (context.mounted) context.go('/');
       },
       child: Scaffold(
         backgroundColor: Theme.of(context).brightness == Brightness.dark
             ? AppColors.darkBg
             : AppColors.lightBg,
-        body: Column(
-          children: [
-            const TopToolbar(),
-            Expanded(
-              child: isMobile
-                  ? _buildMobileLayout()
-                  : _buildDesktopLayout(isTablet, showSidePanels),
-            ),
-          ],
+        body: SafeArea(
+          top: true,
+          child: Column(
+            children: [
+              const TopToolbar(),
+              Expanded(
+                child: isMobile
+                    ? _buildMobileLayout()
+                    : _buildDesktopLayout(isTablet, showSidePanels),
+              ),
+            ],
+          ),
         ),
       ),
     );

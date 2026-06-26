@@ -64,7 +64,7 @@ class CanvasEngine extends CustomPainter {
     canvas.save();
     canvas.clipRect(Rect.fromLTWH(0, 0, size.width, size.height));
 
-    final bgColor = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF8F9FA);
+    final bgColor = isDark ? const Color(0xFF12121F) : const Color(0xFFF0F0F2);
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), Paint()..color = bgColor);
 
     if (showGrid) {
@@ -76,8 +76,6 @@ class CanvasEngine extends CustomPainter {
     canvas.save();
     canvas.translate(transform.pan.dx, transform.pan.dy);
     canvas.scale(transform.zoom);
-
-    _paintCanvasBoundary(canvas);
 
     final visibleShapes = shapes.where((s) {
       if (!s.isVisible) return false;
@@ -111,7 +109,7 @@ class CanvasEngine extends CustomPainter {
 
   void _paintGrid(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = isDark ? Colors.white12 : Colors.black12
+      ..color = isDark ? const Color(0xFF2A2A3E) : const Color(0xFFE0E0E0)
       ..strokeWidth = 0.5;
 
     final gridSize = CanvasConstants.gridSize * transform.zoom;
