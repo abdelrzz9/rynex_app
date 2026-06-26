@@ -35,6 +35,8 @@ import '../providers/active_drawing_provider.dart';
 import '../providers/canvas_provider.dart';
 import '../providers/drag_offset_provider.dart';
 
+enum GestureMode { none, shapeDrag, resize, rotate, canvasPan, marquee }
+
 class CanvasGestureHandler extends ConsumerStatefulWidget {
   final Widget child;
   final bool drawingEnabled;
@@ -46,17 +48,24 @@ class CanvasGestureHandler extends ConsumerStatefulWidget {
 }
 
 class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
+  GestureMode _gestureMode = GestureMode.none;
+
   Offset? _drawStart;
   Offset? _drawCurrent;
   List<Offset> _freehandPoints = [];
-  Offset? _initialDragStart;
-  Map<String, Offset> _selectedShapePositions = {};
-  Offset? _panStart;
+
+  // Shape drag state
+  Map<String, Offset> _preDragShapeCenters = {};
+  Offset? _dragStartWorldPoint;
 
   // Resize/rotate state
   String? _resizeShapeId;
   ShapeEntity? _resizeOldState;
   Offset? _resizeStartWorldPoint;
+  HandleType? _activeHandle;
+
+  // Pan state
+  Offset? _panStartScreen;
 
   bool get _isShiftPressed => HardwareKeyboard.instance.isShiftPressed;
   bool get _isCtrlPressed => HardwareKeyboard.instance.isControlPressed;
@@ -64,76 +73,83 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      onDoubleTapDown: _onDoubleTapDown,
       onScaleStart: _onScaleStart,
       onScaleUpdate: _onScaleUpdate,
       onScaleEnd: _onScaleEnd,
-      onTapUp: _onTapUp,
-      onDoubleTapDown: _onDoubleTapDown,
       behavior: HitTestBehavior.opaque,
-      child: widget.child,
+      child: Listener(
+        onPointerDown: _onPointerDown,
+        onPointerMove: _onPointerMove,
+        onPointerUp: _onPointerUp,
+        onPointerCancel: (_) => _resetAll(),
+        behavior: HitTestBehavior.opaque,
+        child: widget.child,
+      ),
     );
   }
 
-  void _onScaleStart(ScaleStartDetails details) {
+  void _onPointerDown(PointerDownEvent event) {
     final tool = ref.read(activeToolProvider);
     if (tool == DrawingTool.select) {
-      _handleSelectStart(details);
+      _handleSelectPointerDown(event);
     } else if (tool == DrawingTool.hand) {
-      _panStart = details.localFocalPoint;
-    } else if (tool == DrawingTool.eraser) {
-      _handleDrawStart(details);
-    } else {
-      _handleDrawStart(details);
+      _gestureMode = GestureMode.canvasPan;
+      _panStartScreen = event.position;
     }
   }
 
-  void _onScaleUpdate(ScaleUpdateDetails details) {
+  void _onPointerMove(PointerMoveEvent event) {
+    switch (_gestureMode) {
+      case GestureMode.shapeDrag:
+        _handleShapeDragMove(event);
+      case GestureMode.resize:
+      case GestureMode.rotate:
+        _handleResizeMove(event);
+      case GestureMode.canvasPan:
+        if (ref.read(activeToolProvider) == DrawingTool.hand && _panStartScreen != null) {
+          final delta = event.position - _panStartScreen!;
+          ref.read(canvasProvider.notifier).panBy(delta);
+          _panStartScreen = event.position;
+        }
+      case GestureMode.marquee:
+        ref.read(selectionProvider.notifier).updateMarquee(event.position);
+      case GestureMode.none:
+        break;
+    }
+  }
+
+  void _onPointerUp(PointerUpEvent event) {
     final tool = ref.read(activeToolProvider);
-    if (tool == DrawingTool.select) {
-      _handleSelectUpdate(details);
-    } else if (tool == DrawingTool.hand) {
-      if (_panStart != null) {
-        final delta = details.localFocalPoint - _panStart!;
-        ref.read(canvasProvider.notifier).panBy(delta);
-        _panStart = details.localFocalPoint;
+
+    switch (_gestureMode) {
+      case GestureMode.shapeDrag:
+        _commitShapeDrag();
+      case GestureMode.resize:
+      case GestureMode.rotate:
+        _commitResize();
+      case GestureMode.marquee:
+        _finishMarquee();
+      case GestureMode.canvasPan:
+      case GestureMode.none:
+        break;
+    }
+
+    _resetPointerState();
+
+    if (_gestureMode != GestureMode.shapeDrag &&
+        _gestureMode != GestureMode.resize &&
+        _gestureMode != GestureMode.rotate &&
+        _gestureMode != GestureMode.marquee) {
+      if (tool == DrawingTool.select) {
+        _handleTapSelect(event.position);
+      } else if (tool == DrawingTool.text) {
+        _handleAddText(event.position, withDialog: true);
+      } else if (tool == DrawingTool.image) {
+        _handleAddImage(event.position);
       }
-    } else if (_drawStart != null) {
-      _handleDrawUpdate(details);
     }
-  }
-
-  void _onScaleEnd(ScaleEndDetails details) {
-    final tool = ref.read(activeToolProvider);
-    if (tool == DrawingTool.select) {
-      _finishSelect();
-    } else if (tool == DrawingTool.hand) {
-      _panStart = null;
-    } else if (_drawStart != null && _drawCurrent != null) {
-      _finishDrawing(tool);
-    }
-
-    _drawStart = null;
-    _drawCurrent = null;
-    _freehandPoints = [];
-    _initialDragStart = null;
-    _selectedShapePositions = {};
-    _resizeShapeId = null;
-    _resizeOldState = null;
-    _resizeStartWorldPoint = null;
-
-    ref.read(dragOffsetProvider.notifier).state = {};
-    ref.read(activeDrawingProvider.notifier).state = const ActiveDrawingState();
-  }
-
-  void _onTapUp(TapUpDetails details) {
-    final tool = ref.read(activeToolProvider);
-    if (tool == DrawingTool.select) {
-      _handleTapSelect(details.localPosition);
-    } else if (tool == DrawingTool.text) {
-      _handleAddText(details.localPosition, withDialog: true);
-    } else if (tool == DrawingTool.image) {
-      _handleAddImage(details.localPosition);
-    }
+    _gestureMode = GestureMode.none;
   }
 
   void _onDoubleTapDown(TapDownDetails details) {
@@ -142,6 +158,293 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
       _handleDoubleTapSelect(details.localPosition);
     }
   }
+
+  void _handleSelectPointerDown(PointerDownEvent event) {
+    final transform = ref.read(canvasTransformProvider);
+    final worldPoint = transform.screenToWorld(event.position);
+    final shapes = ref.read(shapeListProvider);
+
+    final handle = _hitTestHandle(event.position);
+    if (handle != null) {
+      final selection = ref.read(selectionProvider);
+      if (selection.isSingle) {
+        final shapeId = selection.selectedIds.first;
+        ShapeEntity? shape;
+        for (final s in shapes) {
+          if (s.id == shapeId) { shape = s; break; }
+        }
+        if (shape != null) {
+          _resizeShapeId = shapeId;
+          _resizeOldState = shape;
+          _resizeStartWorldPoint = worldPoint;
+          _activeHandle = handle;
+          _gestureMode = handle == HandleType.rotation ? GestureMode.rotate : GestureMode.resize;
+          return;
+        }
+      }
+    }
+
+    final hitShape = _hitTestTopmost(shapes, worldPoint);
+    if (hitShape != null) {
+      final selection = ref.read(selectionProvider);
+
+      if (_isShiftPressed) {
+        ref.read(selectionProvider.notifier).toggleSelect(hitShape.id);
+        return;
+      }
+
+      if (!selection.isSelected(hitShape.id)) {
+        ref.read(selectionProvider.notifier).select(hitShape.id);
+      }
+
+      _gestureMode = GestureMode.shapeDrag;
+      _dragStartWorldPoint = worldPoint;
+      _preDragShapeCenters = {};
+      final selectedIds = ref.read(selectionProvider).selectedIds;
+      for (final s in shapes) {
+        if (selectedIds.contains(s.id)) {
+          _preDragShapeCenters[s.id] = s.boundingBox.center;
+        }
+      }
+      return;
+    }
+
+    if (!_isShiftPressed) {
+      ref.read(selectionProvider.notifier).deselectAll();
+    }
+    _gestureMode = GestureMode.marquee;
+    _panStartScreen = event.position;
+    ref.read(selectionProvider.notifier).startMarquee(event.position);
+  }
+
+  void _handleShapeDragMove(PointerMoveEvent event) {
+    if (_dragStartWorldPoint == null) return;
+    final transform = ref.read(canvasTransformProvider);
+    final worldPoint = transform.screenToWorld(event.position);
+    final totalDelta = worldPoint - _dragStartWorldPoint!;
+
+    final overrides = <String, Offset>{};
+    for (final id in _preDragShapeCenters.keys) {
+      overrides[id] = totalDelta;
+    }
+    ref.read(dragOffsetProvider.notifier).state = overrides;
+  }
+
+  void _handleResizeMove(PointerMoveEvent event) {
+    if (_resizeStartWorldPoint == null || _resizeOldState == null || _resizeShapeId == null || _activeHandle == null) return;
+    final transform = ref.read(canvasTransformProvider);
+    final currentWorldPoint = transform.screenToWorld(event.position);
+    final deltaWorld = currentWorldPoint - _resizeStartWorldPoint!;
+    final shape = _resizeOldState!;
+
+    if (_activeHandle == HandleType.rotation) {
+      final center = shape.boundingBox.center;
+      final startAngle = atan2(
+        _resizeStartWorldPoint!.dy - center.dy,
+        _resizeStartWorldPoint!.dx - center.dx,
+      );
+      final currentAngle = atan2(
+        currentWorldPoint.dy - center.dy,
+        currentWorldPoint.dx - center.dx,
+      );
+      final deltaAngle = currentAngle - startAngle;
+      final newRotation = (_resizeOldState!.rotation + deltaAngle) % (2 * pi);
+      final updated = shape.copyWith(rotation: newRotation);
+      ref.read(shapeListProvider.notifier).updateShape(_resizeShapeId!, updated);
+      return;
+    }
+
+    final bounds = _resizeOldState!.boundingBox;
+    double left = bounds.left, top = bounds.top, right = bounds.right, bottom = bounds.bottom;
+
+    switch (_activeHandle!) {
+      case HandleType.topLeft:
+        left += deltaWorld.dx; top += deltaWorld.dy; break;
+      case HandleType.topCenter:
+        top += deltaWorld.dy; break;
+      case HandleType.topRight:
+        right += deltaWorld.dx; top += deltaWorld.dy; break;
+      case HandleType.midLeft:
+        left += deltaWorld.dx; break;
+      case HandleType.midRight:
+        right += deltaWorld.dx; break;
+      case HandleType.bottomLeft:
+        left += deltaWorld.dx; bottom += deltaWorld.dy; break;
+      case HandleType.bottomCenter:
+        bottom += deltaWorld.dy; break;
+      case HandleType.bottomRight:
+        right += deltaWorld.dx; bottom += deltaWorld.dy; break;
+      default:
+        break;
+    }
+
+    if (right - left < 5 || bottom - top < 5) return;
+
+    final newRect = Rect.fromLTRB(left, top, right, bottom);
+    final updated = shape.copyWith(boundingBox: newRect);
+    ref.read(shapeListProvider.notifier).updateShape(_resizeShapeId!, updated);
+  }
+
+  void _commitShapeDrag() {
+    final overrides = ref.read(dragOffsetProvider);
+    if (overrides.isEmpty) return;
+
+    final shapes = ref.read(shapeListProvider);
+    final commands = <Command>[];
+    for (final entry in overrides.entries) {
+      final idx = shapes.indexWhere((s) => s.id == entry.key);
+      if (idx == -1) continue;
+      final shape = shapes[idx];
+      final newBox = shape.boundingBox.translate(entry.value.dx, entry.value.dy);
+      final updated = shape.copyWith(boundingBox: newBox);
+      commands.add(ModifyShapeCommand(
+        shapeId: entry.key,
+        oldState: shape,
+        newState: updated,
+        onUpdate: (id, s) => ref.read(shapeListProvider.notifier).updateShape(id, s),
+      ));
+    }
+
+    if (commands.length == 1) {
+      ref.read(historyProvider.notifier).execute(commands.first);
+    } else if (commands.length > 1) {
+      ref.read(historyProvider.notifier).execute(CompositeCommand(commands));
+    }
+    ref.read(dragOffsetProvider.notifier).state = {};
+  }
+
+  void _commitResize() {
+    if (_resizeShapeId != null && _resizeOldState != null) {
+      ShapeEntity? currentShape;
+      for (final s in ref.read(shapeListProvider)) {
+        if (s.id == _resizeShapeId) { currentShape = s; break; }
+      }
+      if (currentShape != null) {
+        ref.read(historyProvider.notifier).executeModify(_resizeShapeId!, _resizeOldState!, currentShape);
+      }
+      ref.read(selectionProvider.notifier).clearActiveHandle();
+    }
+  }
+
+  void _finishMarquee() {
+    final selection = ref.read(selectionProvider);
+    if (selection.hasMarquee) {
+      final worldMarquee = ref.read(canvasTransformProvider).screenToWorldRect(selection.marqueeRect!);
+      final shapes = ref.read(shapeListProvider);
+      final hitIds = shapes.where((s) => worldMarquee.overlaps(s.rotatedBoundingBox)).map((s) => s.id).toList();
+      ref.read(selectionProvider.notifier).endMarquee(hitIds);
+    }
+  }
+
+  void _resetPointerState() {
+    _panStartScreen = null;
+    _resizeShapeId = null;
+    _resizeOldState = null;
+    _resizeStartWorldPoint = null;
+    _activeHandle = null;
+    _preDragShapeCenters = {};
+    _dragStartWorldPoint = null;
+    _drawStart = null;
+    _drawCurrent = null;
+    _freehandPoints = [];
+    ref.read(dragOffsetProvider.notifier).state = {};
+    ref.read(activeDrawingProvider.notifier).state = const ActiveDrawingState();
+  }
+
+  void _resetAll() {
+    _gestureMode = GestureMode.none;
+    _resetPointerState();
+  }
+
+  // ---- Scale (pinch zoom) handlers ----
+
+  void _onScaleStart(ScaleStartDetails details) {
+    if (_gestureMode != GestureMode.none) return;
+    final tool = ref.read(activeToolProvider);
+    if (tool == DrawingTool.select || tool == DrawingTool.hand) return;
+    if (tool == DrawingTool.eraser) {
+      _handleDrawStart(details);
+    } else {
+      _handleDrawStart(details);
+    }
+  }
+
+  void _onScaleUpdate(ScaleUpdateDetails details) {
+    if (details.pointerCount > 1) {
+      final canvasState = ref.read(canvasProvider);
+      final newZoom = (canvasState.transform.zoom * details.scale)
+          .clamp(CanvasConstants.minZoom, CanvasConstants.maxZoom);
+      ref.read(canvasProvider.notifier).setZoom(newZoom);
+      return;
+    }
+
+    if (_gestureMode != GestureMode.none) return;
+    final tool = ref.read(activeToolProvider);
+    if (tool == DrawingTool.select || tool == DrawingTool.hand) return;
+    if (_drawStart != null) {
+      _handleDrawUpdate(details);
+    }
+  }
+
+  void _onScaleEnd(ScaleEndDetails details) {
+    if (_gestureMode != GestureMode.none) return;
+    final tool = ref.read(activeToolProvider);
+    if (tool == DrawingTool.select || tool == DrawingTool.hand) return;
+    if (_drawStart != null && _drawCurrent != null) {
+      _finishDrawing(tool);
+    }
+    _drawStart = null;
+    _drawCurrent = null;
+    _freehandPoints = [];
+  }
+
+  // ---- Handle hit-testing (28px touch radius) ----
+
+  HandleType? _hitTestHandle(Offset screenPoint) {
+    final selection = ref.read(selectionProvider);
+    if (!selection.isSingle || selection.isEmpty) return null;
+
+    final shapes = ref.read(shapeListProvider);
+    final shapeId = selection.selectedIds.first;
+    ShapeEntity? shape;
+    for (final s in shapes) {
+      if (s.id == shapeId) { shape = s; break; }
+    }
+    if (shape == null) return null;
+
+    if (shape.type == ShapeType.line || shape.type == ShapeType.arrow || shape.type == ShapeType.freehand) return null;
+
+    final transform = ref.read(canvasTransformProvider);
+    final screenRect = transform.worldToScreenRect(shape.rotatedBoundingBox);
+
+    const threshold = 28.0;
+
+    final topLeft = screenRect.topLeft;
+    if ((topLeft - screenPoint).distance <= threshold) return HandleType.topLeft;
+    final topCenter = Offset(screenRect.center.dx, screenRect.top);
+    if ((topCenter - screenPoint).distance <= threshold) return HandleType.topCenter;
+    final topRight = screenRect.topRight;
+    if ((topRight - screenPoint).distance <= threshold) return HandleType.topRight;
+    final midLeft = Offset(screenRect.left, screenRect.center.dy);
+    if ((midLeft - screenPoint).distance <= threshold) return HandleType.midLeft;
+    final midRight = Offset(screenRect.right, screenRect.center.dy);
+    if ((midRight - screenPoint).distance <= threshold) return HandleType.midRight;
+    final bottomLeft = screenRect.bottomLeft;
+    if ((bottomLeft - screenPoint).distance <= threshold) return HandleType.bottomLeft;
+    final bottomCenter = Offset(screenRect.center.dx, screenRect.bottom);
+    if ((bottomCenter - screenPoint).distance <= threshold) return HandleType.bottomCenter;
+    final bottomRight = screenRect.bottomRight;
+    if ((bottomRight - screenPoint).distance <= threshold) return HandleType.bottomRight;
+
+    final rotationPos = Offset(screenRect.center.dx, screenRect.top - 24);
+    if ((rotationPos - screenPoint).distance <= threshold) {
+      return HandleType.rotation;
+    }
+
+    return null;
+  }
+
+  // ---- Preserved existing methods (drawing, text, image, eraser) ----
 
   void _handleDoubleTapSelect(Offset screenPoint) {
     final transform = ref.read(canvasTransformProvider);
@@ -182,232 +485,6 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
         ],
       ),
     );
-  }
-
-  HandleType? _hitTestHandle(Offset screenPoint) {
-    final selection = ref.read(selectionProvider);
-    if (!selection.isSingle || selection.isEmpty) return null;
-
-    final shapes = ref.read(shapeListProvider);
-    final shapeId = selection.selectedIds.first;
-    ShapeEntity? shape;
-    for (final s in shapes) {
-      if (s.id == shapeId) { shape = s; break; }
-    }
-    if (shape == null) return null;
-
-    if (shape.type == ShapeType.line || shape.type == ShapeType.arrow || shape.type == ShapeType.freehand) return null;
-
-    final transform = ref.read(canvasTransformProvider);
-    final screenRect = transform.worldToScreenRect(shape.rotatedBoundingBox);
-
-    const threshold = 22.0;
-
-    final topLeft = screenRect.topLeft;
-    final topCenter = Offset(screenRect.center.dx, screenRect.top);
-    if ((topCenter - screenPoint).distance <= threshold) return HandleType.topCenter;
-    final topRight = screenRect.topRight;
-    if ((topRight - screenPoint).distance <= threshold) return HandleType.topRight;
-    final midLeft = Offset(screenRect.left, screenRect.center.dy);
-    if ((midLeft - screenPoint).distance <= threshold) return HandleType.midLeft;
-    final midRight = Offset(screenRect.right, screenRect.center.dy);
-    if ((midRight - screenPoint).distance <= threshold) return HandleType.midRight;
-    final bottomLeft = screenRect.bottomLeft;
-    if ((bottomLeft - screenPoint).distance <= threshold) return HandleType.bottomLeft;
-    final bottomCenter = Offset(screenRect.center.dx, screenRect.bottom);
-    if ((bottomCenter - screenPoint).distance <= threshold) return HandleType.bottomCenter;
-    final bottomRight = screenRect.bottomRight;
-    if ((bottomRight - screenPoint).distance <= threshold) return HandleType.bottomRight;
-    if ((topLeft - screenPoint).distance <= threshold) return HandleType.topLeft;
-
-    final rotationPos = Offset(screenRect.center.dx, screenRect.top - 24);
-    if ((rotationPos - screenPoint).distance <= 22.0) {
-      return HandleType.rotation;
-    }
-
-    return null;
-  }
-
-  void _handleSelectStart(ScaleStartDetails details) {
-    final transform = ref.read(canvasTransformProvider);
-    final worldPoint = transform.screenToWorld(details.localFocalPoint);
-    final shapes = ref.read(shapeListProvider);
-
-    final handle = _hitTestHandle(details.localFocalPoint);
-    if (handle != null) {
-      final selection = ref.read(selectionProvider);
-      final selectedId = selection.selectedIds.first;
-      final idx = shapes.indexWhere((s) => s.id == selectedId);
-      if (idx == -1) return;
-      final shape = shapes[idx];
-      _resizeShapeId = selectedId;
-      _resizeOldState = shape;
-      _resizeStartWorldPoint = worldPoint;
-      ref.read(selectionProvider.notifier).setActiveHandle(handle, details.localFocalPoint);
-      return;
-    }
-
-    final hitShape = _hitTestTopmost(shapes, worldPoint);
-
-    if (hitShape != null) {
-      final selection = ref.read(selectionProvider);
-
-      if (_isShiftPressed) {
-        ref.read(selectionProvider.notifier).toggleSelect(hitShape.id);
-      } else if (!selection.isSelected(hitShape.id)) {
-        ref.read(selectionProvider.notifier).select(hitShape.id);
-      }
-
-      _initialDragStart = worldPoint;
-      _selectedShapePositions = {};
-      final selectedIds = ref.read(selectionProvider).selectedIds;
-      for (final s in shapes) {
-        if (selectedIds.contains(s.id)) {
-          _selectedShapePositions[s.id] = s.boundingBox.center;
-        }
-      }
-    } else {
-      if (!_isShiftPressed) {
-        ref.read(selectionProvider.notifier).deselectAll();
-      }
-      _initialDragStart = worldPoint;
-      ref.read(selectionProvider.notifier).startMarquee(details.localFocalPoint);
-    }
-  }
-
-  void _handleSelectUpdate(ScaleUpdateDetails details) {
-    final selection = ref.read(selectionProvider);
-
-    if (selection.hasActiveHandle && _resizeShapeId != null) {
-      _handleResizeUpdate(details);
-      return;
-    }
-
-    final transform = ref.read(canvasTransformProvider);
-    final worldPoint = transform.screenToWorld(details.localFocalPoint);
-
-    if (selection.hasMarquee) {
-      ref.read(selectionProvider.notifier).updateMarquee(details.localFocalPoint);
-    } else if (selection.isNotEmpty && _initialDragStart != null) {
-      final totalDelta = worldPoint - _initialDragStart!;
-      final overrides = <String, Offset>{};
-      for (final id in _selectedShapePositions.keys) {
-        overrides[id] = totalDelta;
-      }
-      ref.read(dragOffsetProvider.notifier).state = overrides;
-    }
-  }
-
-  void _handleResizeUpdate(ScaleUpdateDetails details) {
-    final selection = ref.read(selectionProvider);
-    final handle = selection.activeHandle;
-    if (handle == null || _resizeStartWorldPoint == null || _resizeOldState == null) return;
-
-    final transform = ref.read(canvasTransformProvider);
-    final currentWorldPoint = transform.screenToWorld(details.localFocalPoint);
-    final deltaWorld = currentWorldPoint - _resizeStartWorldPoint!;
-    final shapes = ref.read(shapeListProvider);
-    ShapeEntity? shape;
-    for (final s in shapes) {
-      if (s.id == _resizeShapeId) { shape = s; break; }
-    }
-    if (shape == null) return;
-
-    if (handle == HandleType.rotation) {
-      final center = shape.boundingBox.center;
-      final startAngle = atan2(
-        _resizeStartWorldPoint!.dy - center.dy,
-        _resizeStartWorldPoint!.dx - center.dx,
-      );
-      final currentAngle = atan2(
-        currentWorldPoint.dy - center.dy,
-        currentWorldPoint.dx - center.dx,
-      );
-      final deltaAngle = currentAngle - startAngle;
-      final newRotation = (_resizeOldState!.rotation + deltaAngle) % (2 * pi);
-      final updated = shape.copyWith(rotation: newRotation);
-      ref.read(shapeListProvider.notifier).updateShape(_resizeShapeId!, updated);
-    } else {
-      final bounds = _resizeOldState!.boundingBox;
-      double left = bounds.left, top = bounds.top, right = bounds.right, bottom = bounds.bottom;
-
-      switch (handle) {
-        case HandleType.topLeft:
-          left += deltaWorld.dx; top += deltaWorld.dy; break;
-        case HandleType.topCenter:
-          top += deltaWorld.dy; break;
-        case HandleType.topRight:
-          right += deltaWorld.dx; top += deltaWorld.dy; break;
-        case HandleType.midLeft:
-          left += deltaWorld.dx; break;
-        case HandleType.midRight:
-          right += deltaWorld.dx; break;
-        case HandleType.bottomLeft:
-          left += deltaWorld.dx; bottom += deltaWorld.dy; break;
-        case HandleType.bottomCenter:
-          bottom += deltaWorld.dy; break;
-        case HandleType.bottomRight:
-          right += deltaWorld.dx; bottom += deltaWorld.dy; break;
-        default:
-          break;
-      }
-
-      if (right - left < 5 || bottom - top < 5) return;
-
-      final newRect = Rect.fromLTRB(left, top, right, bottom);
-      final updated = shape.copyWith(boundingBox: newRect);
-      ref.read(shapeListProvider.notifier).updateShape(_resizeShapeId!, updated);
-    }
-  }
-
-  void _finishSelect() {
-    final selection = ref.read(selectionProvider);
-    if (selection.hasActiveHandle && _resizeShapeId != null && _resizeOldState != null) {
-      ShapeEntity? currentShape;
-      for (final s in ref.read(shapeListProvider)) {
-        if (s.id == _resizeShapeId) { currentShape = s; break; }
-      }
-      if (currentShape != null) {
-        ref.read(historyProvider.notifier).executeModify(_resizeShapeId!, _resizeOldState!, currentShape);
-      }
-      ref.read(selectionProvider.notifier).clearActiveHandle();
-      _resizeShapeId = null;
-      _resizeOldState = null;
-      _resizeStartWorldPoint = null;
-      return;
-    }
-
-    final overrides = ref.read(dragOffsetProvider);
-    if (overrides.isNotEmpty) {
-      final shapes = ref.read(shapeListProvider);
-      final commands = <Command>[];
-      for (final entry in overrides.entries) {
-        final idx = shapes.indexWhere((s) => s.id == entry.key);
-        if (idx == -1) continue;
-        final shape = shapes[idx];
-        final newBoxOld = shape.boundingBox.translate(entry.value.dx, entry.value.dy);
-        final updated = shape.copyWith(boundingBox: newBoxOld);
-        commands.add(ModifyShapeCommand(
-          shapeId: entry.key,
-          oldState: shape,
-          newState: updated,
-          onUpdate: (id, s) => ref.read(shapeListProvider.notifier).updateShape(id, s),
-        ));
-      }
-      if (commands.length == 1) {
-        ref.read(historyProvider.notifier).execute(commands.first);
-      } else if (commands.length > 1) {
-        ref.read(historyProvider.notifier).execute(CompositeCommand(commands));
-      }
-      ref.read(dragOffsetProvider.notifier).state = {};
-    }
-
-    if (selection.hasMarquee) {
-      final worldMarquee = ref.read(canvasTransformProvider).screenToWorldRect(selection.marqueeRect!);
-      final shapes = ref.read(shapeListProvider);
-      final hitIds = shapes.where((s) => worldMarquee.overlaps(s.rotatedBoundingBox)).map((s) => s.id).toList();
-      ref.read(selectionProvider.notifier).endMarquee(hitIds);
-    }
   }
 
   void _handleTapSelect(Offset screenPoint) {

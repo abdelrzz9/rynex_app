@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/uuid_generator.dart';
 import '../../../canvas/presentation/providers/canvas_provider.dart';
@@ -116,6 +115,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Future<void> _createNewProject() async {
+    if (_isCreatingProject) return;
     setState(() => _isCreatingProject = true);
     try {
       final id = UuidGenerator.generate();
@@ -127,14 +127,16 @@ class _HomePageState extends ConsumerState<HomePage> {
       ref.read(selectionProvider.notifier).deselectAll();
       ref.read(canvasProvider.notifier).resetViewport();
       await ref.read(activeProjectProvider.notifier).open(project);
-      if (!mounted) return;
-      await context.pushNamed('editor');
+      if (mounted) context.go('/editor');
+    } on Object catch (e) {
+      debugPrint('Create project error: $e');
     } finally {
       if (mounted) setState(() => _isCreatingProject = false);
     }
   }
 
   Future<void> _openProject(String id) async {
+    if (_openingProjectId != null) return;
     setState(() => _openingProjectId = id);
     try {
       ref.read(shapeListProvider.notifier).clearAll();
@@ -142,11 +144,11 @@ class _HomePageState extends ConsumerState<HomePage> {
       ref.read(selectionProvider.notifier).deselectAll();
       await ref.read(activeProjectProvider.notifier).load(id);
       final project = ref.read(activeProjectProvider);
-      if (project != null) {
-        await ref.read(projectStorageServiceProvider).saveProject(project);
-        if (!mounted) return;
-        await context.pushNamed('editor');
+      if (project != null && mounted) {
+        context.go('/editor');
       }
+    } on Object catch (e) {
+      debugPrint('Open project error: $e');
     } finally {
       if (mounted) setState(() => _openingProjectId = null);
     }

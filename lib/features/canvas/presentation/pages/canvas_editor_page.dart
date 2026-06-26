@@ -54,28 +54,33 @@ class _CanvasEditorPageState extends ConsumerState<CanvasEditorPage> {
     final isMobile = screenWidth < 600;
     final isTablet = screenWidth >= 600 && screenWidth < 1200;
     final showSidePanels = screenWidth >= 1200;
+
+    ref.listen(shapeListProvider, (_, shapes) {
+      ref.read(activeProjectProvider.notifier).updateShapes(shapes);
+    });
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
-        await ref.read(activeProjectProvider.notifier).saveNow();
+        try {
+          await ref.read(activeProjectProvider.notifier)
+              .saveNow()
+              .timeout(const Duration(seconds: 3));
+        } on Object catch (e) {
+          debugPrint('Save on back failed or timed out: $e');
+        }
         if (context.mounted) context.go('/');
       },
       child: Scaffold(
         backgroundColor: Theme.of(context).brightness == Brightness.dark
             ? AppColors.darkBg
             : AppColors.lightBg,
+        appBar: const TopToolbar(),
         body: SafeArea(
-          child: Column(
-            children: [
-              const TopToolbar(),
-              Expanded(
-                child: isMobile
-                    ? _buildMobileLayout()
-                    : _buildDesktopLayout(isTablet, showSidePanels),
-              ),
-            ],
-          ),
+          child: isMobile
+              ? _buildMobileLayout()
+              : _buildDesktopLayout(isTablet, showSidePanels),
         ),
       ),
     );

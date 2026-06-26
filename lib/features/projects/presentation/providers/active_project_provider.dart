@@ -72,8 +72,9 @@ class ActiveProjectNotifier extends StateNotifier<Project?> {
     _saveTimer?.cancel();
     if (state == null) return;
     try {
-      await _storage.saveProject(state!);
+      await _storage.saveProject(state!).timeout(const Duration(seconds: 3));
       _ref.read(saveErrorProvider.notifier).state = null;
+      _ref.invalidate(projectListProvider);
     } on Object catch (e) {
       debugPrint('Failed to save project: $e');
       _ref.read(saveErrorProvider.notifier).state = 'Failed to save project. Check available storage.';
@@ -83,7 +84,6 @@ class ActiveProjectNotifier extends StateNotifier<Project?> {
   @override
   void dispose() {
     _saveTimer?.cancel();
-    unawaited(_save().then((_) {}).catchError((_) {}));
     super.dispose();
   }
 }

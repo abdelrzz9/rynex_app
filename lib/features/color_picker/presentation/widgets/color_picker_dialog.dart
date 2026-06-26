@@ -88,7 +88,7 @@ class _ColorPickerDialogState extends State<ColorPickerDialog> {
         TextButton(
           onPressed: () {
             widget.onColorChanged(_currentColor);
-            Navigator.pop(context);
+            Navigator.pop(context, _currentColor);
           },
           child: const Text('Select'),
         ),
