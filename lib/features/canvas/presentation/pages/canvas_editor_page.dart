@@ -8,8 +8,8 @@ import '../../../shapes/presentation/providers/shape_provider.dart';
 import '../../../shapes/presentation/widgets/drawing_toolbar.dart';
 import '../../../shapes/presentation/widgets/properties_panel.dart';
 import '../widgets/canvas_gesture_handler.dart';
-import '../widgets/infinite_canvas.dart';
 import '../widgets/canvas_welcome_overlay.dart';
+import '../widgets/infinite_canvas.dart';
 import '../widgets/top_toolbar.dart';
 
 class CanvasEditorPage extends ConsumerStatefulWidget {

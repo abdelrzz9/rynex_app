@@ -24,7 +24,7 @@ class DrawingToolbar extends ConsumerWidget {
     final iconSize = isShort ? 18.0 : (isMobile ? 20.0 : 22.0);
     final buttonSize = isShort ? 38.0 : (isMobile ? 44.0 : 48.0);
 
-    final tools = _toolGroups;
+    const tools = _toolGroups;
 
     if (isMobile) {
       final mobileChildren = <Widget>[];
@@ -43,7 +43,7 @@ class DrawingToolbar extends ConsumerWidget {
         }
         if (group != tools.last) {
           mobileChildren.add(Padding(
-            padding: EdgeInsets.symmetric(horizontal: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 2),
             child: Container(width: 1, height: 24, color: borderColor),
           ));
         }
@@ -56,7 +56,7 @@ class DrawingToolbar extends ConsumerWidget {
         ),
         child: ListView(
           scrollDirection: Axis.horizontal,
-          padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
           physics: const BouncingScrollPhysics(),
           children: mobileChildren,
         ),

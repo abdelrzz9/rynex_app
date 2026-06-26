@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/uuid_generator.dart';
-import '../../../settings/presentation/providers/settings_provider.dart';
 import '../../../canvas/presentation/providers/canvas_provider.dart';
 import '../../../history/presentation/providers/history_provider.dart';
 import '../../../projects/domain/entities/project.dart';
@@ -12,6 +11,7 @@ import '../../../projects/domain/entities/project_summary.dart';
 import '../../../projects/presentation/providers/active_project_provider.dart';
 import '../../../projects/presentation/providers/project_list_provider.dart';
 import '../../../selection/presentation/providers/selection_provider.dart';
+import '../../../settings/presentation/providers/settings_provider.dart';
 import '../../../shapes/presentation/providers/shape_provider.dart';
 
 class HomePage extends ConsumerStatefulWidget {
@@ -40,7 +40,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     });
     try {
       await ref.read(projectListProvider.notifier).loadProjects();
-    } catch (e) {
+    } on Exception catch (_) {
       if (mounted) setState(() => _projectListError = 'Failed to load projects.');
     } finally {
       if (mounted) setState(() => _isProjectListLoading = false);
@@ -55,7 +55,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final bg = isDark ? AppColors.darkBg : AppColors.lightBg;
     final surface = isDark ? AppColors.darkSurface : AppColors.lightSurface;
     final primary = isDark ? AppColors.primaryPurpleDark : AppColors.primaryPurple;
-    final primaryLight = AppColors.primaryPurpleLight;
+    const primaryLight = AppColors.primaryPurpleLight;
     final textPrimary = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
     final textSecondary = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
     final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
@@ -128,7 +128,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       ref.read(canvasProvider.notifier).resetViewport();
       await ref.read(activeProjectProvider.notifier).open(project);
       if (!mounted) return;
-      context.pushNamed('editor');
+      await context.pushNamed('editor');
     } finally {
       if (mounted) setState(() => _isCreatingProject = false);
     }
@@ -145,7 +145,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       if (project != null) {
         await ref.read(projectStorageServiceProvider).saveProject(project);
         if (!mounted) return;
-        context.pushNamed('editor');
+        await context.pushNamed('editor');
       }
     } finally {
       if (mounted) setState(() => _openingProjectId = null);

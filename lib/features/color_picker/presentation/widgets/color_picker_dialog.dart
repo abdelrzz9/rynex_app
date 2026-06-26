@@ -417,16 +417,16 @@ class _ColorWheelPainter extends CustomPainter {
       ..addOval(Rect.fromCircle(center: center, radius: innerRadius));
     canvas.clipPath(ringPath);
 
-    // UX FIX 5 — HSVColor stops for accurate hue spectrum
-    final shader = SweepGradient(
+    // UX FIX 5 — Hue stops at 60° intervals (HSV-color-precise hex values)
+    final shader = const SweepGradient(
       colors: [
-        HSVColor.fromAHSV(1, 0, 1, 1).toColor(),
-        HSVColor.fromAHSV(1, 60, 1, 1).toColor(),
-        HSVColor.fromAHSV(1, 120, 1, 1).toColor(),
-        HSVColor.fromAHSV(1, 180, 1, 1).toColor(),
-        HSVColor.fromAHSV(1, 240, 1, 1).toColor(),
-        HSVColor.fromAHSV(1, 300, 1, 1).toColor(),
-        HSVColor.fromAHSV(1, 360, 1, 1).toColor(),
+        Color(0xFFFF0000), // 0°
+        Color(0xFFFFFF00), // 60°
+        Color(0xFF00FF00), // 120°
+        Color(0xFF00FFFF), // 180°
+        Color(0xFF0000FF), // 240°
+        Color(0xFFFF00FF), // 300°
+        Color(0xFFFF0000), // 360°
       ],
     ).createShader(wheelRect);
     canvas.drawCircle(center, outerRadius, Paint()..shader = shader);
@@ -439,8 +439,6 @@ class _ColorWheelPainter extends CustomPainter {
           Colors.white.withValues(alpha: brightness),
           Colors.transparent,
         ],
-        center: Alignment.center,
-        radius: 1,
       ).createShader(Rect.fromCircle(center: center, radius: outerRadius));
 
     canvas.drawCircle(center, outerRadius, gradientPaint);
@@ -451,8 +449,6 @@ class _ColorWheelPainter extends CustomPainter {
           Colors.transparent,
           Colors.black.withValues(alpha: 0.5),
         ],
-        center: Alignment.center,
-        radius: 1,
       ).createShader(Rect.fromCircle(center: center, radius: outerRadius));
 
     canvas.drawCircle(center, outerRadius, darkPaint);
