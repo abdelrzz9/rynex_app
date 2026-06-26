@@ -28,5 +28,9 @@ class HistoryState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [undoStack.length, redoStack.length, maxSize];
+  List<Object?> get props => [
+        undoStack.map((c) => c.id).toList(),
+        redoStack.map((c) => c.id).toList(),
+        maxSize,
+      ];
 }

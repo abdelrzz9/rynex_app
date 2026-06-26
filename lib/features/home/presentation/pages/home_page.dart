@@ -81,7 +81,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
               ),
             ),
-            _BottomNav(primary: primary, textSecondary: textSecondary, surface: surface, border: border),
+            // FEATURE 3 DONE — Removed useless _BottomNav banner
           ],
         ),
       ),
@@ -415,77 +415,4 @@ class _ProjectCard extends StatelessWidget {
   }
 }
 
-class _BottomNav extends StatelessWidget {
-  final Color primary;
-  final Color textSecondary;
-  final Color surface;
-  final Color border;
 
-  const _BottomNav({
-    required this.primary,
-    required this.textSecondary,
-    required this.surface,
-    required this.border,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 72,
-      decoration: BoxDecoration(
-        color: surface,
-        border: Border(top: BorderSide(color: border)),
-      ),
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.home, size: 20, color: primary),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Home',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.folder_outlined, size: 22, color: textSecondary),
-                const SizedBox(height: 4),
-                Text(
-                  'Projects',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'shape.dart';
@@ -30,6 +31,7 @@ class ImageShape extends ShapeEntity {
         'width': boundingBox.width,
         'height': boundingBox.height,
         'rotation': rotation,
+        'imageBytes': base64Encode(imageBytes),
         'originalWidth': originalSize.width,
         'originalHeight': originalSize.height,
         'opacity': style.opacity,

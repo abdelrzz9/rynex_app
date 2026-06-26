@@ -9,6 +9,7 @@ import '../../../shapes/presentation/widgets/drawing_toolbar.dart';
 import '../../../shapes/presentation/widgets/properties_panel.dart';
 import '../widgets/canvas_gesture_handler.dart';
 import '../widgets/infinite_canvas.dart';
+import '../widgets/canvas_welcome_overlay.dart';
 import '../widgets/top_toolbar.dart';
 
 class CanvasEditorPage extends ConsumerStatefulWidget {
@@ -27,6 +28,7 @@ class _CanvasEditorPageState extends ConsumerState<CanvasEditorPage> {
       if (project != null && project.shapes.isNotEmpty) {
         ref.read(shapeListProvider.notifier).shapes = project.shapes;
       }
+      CanvasWelcomeOverlay.show(context, project?.name ?? 'Untitled Drawing');
     });
   }
 

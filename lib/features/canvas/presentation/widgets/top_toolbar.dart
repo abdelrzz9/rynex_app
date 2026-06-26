@@ -13,6 +13,7 @@ import '../../../projects/presentation/providers/active_project_provider.dart';
 import '../../../projects/presentation/providers/project_list_provider.dart';
 import '../../../shapes/presentation/providers/shape_provider.dart';
 import '../providers/canvas_provider.dart';
+import 'canvas_name_editor.dart';
 
 class TopToolbar extends ConsumerWidget {
   const TopToolbar({super.key});
@@ -22,7 +23,6 @@ class TopToolbar extends ConsumerWidget {
     final canvasState = ref.watch(canvasProvider);
     final canUndo = ref.watch(canUndoProvider);
     final canRedo = ref.watch(canRedoProvider);
-    final project = ref.watch(activeProjectProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final bgColor = isDark ? AppColors.darkSurface : AppColors.lightSurface;
@@ -56,31 +56,7 @@ class TopToolbar extends ConsumerWidget {
           ),
           if (screenWidth > 360) ...[
             const SizedBox(width: 4),
-            Tooltip(
-              message: 'Double-tap to rename',
-              child: GestureDetector(
-                onDoubleTap: () => _showRenameDialog(context, ref, project?.name ?? ''),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: isMobile ? 120 : 240),
-                      child: Text(
-                        project?.name ?? 'Untitled Drawing',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: isMobile ? 13 : 15,
-                          color: fgColor,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Icon(Icons.edit, size: 16, color: fgColor.withValues(alpha: 0.7)),
-                  ],
-                ),
-              ),
-            ),
+            const CanvasNameEditor(),
           ],
           const Spacer(),
           SingleChildScrollView(
@@ -175,56 +151,6 @@ class TopToolbar extends ConsumerWidget {
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showRenameDialog(BuildContext context, WidgetRef ref, String currentName) {
-    final controller = TextEditingController(text: currentName);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Theme.of(context).brightness == Brightness.dark
-            ? AppColors.darkCard
-            : AppColors.lightCard,
-        title: Text(
-          'Rename Project',
-          style: TextStyle(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? AppColors.textPrimary
-                : AppColors.textPrimaryLight,
-          ),
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: 'Project name',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          style: TextStyle(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? AppColors.textPrimary
-                : AppColors.textPrimaryLight,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              if (controller.text.trim().isNotEmpty) {
-                ref.read(activeProjectProvider.notifier).updateName(controller.text.trim());
-              }
-              Navigator.pop(ctx);
-            },
-            child: const Text('Rename'),
           ),
         ],
       ),

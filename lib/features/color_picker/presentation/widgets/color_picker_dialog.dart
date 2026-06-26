@@ -407,35 +407,31 @@ class _ColorWheelPainter extends CustomPainter {
     final outerRadius = radius;
     final innerRadius = radius * 0.15;
 
-    // Draw color wheel
-    for (var angle = 0; angle < 360; angle += 1) {
-      final rad = angle * pi / 180;
-      final nextRad = (angle + 1) * pi / 180;
+    // Draw color wheel — single SweepGradient replaces 360-loop
+    final wheelRect = Rect.fromCircle(center: center, radius: outerRadius);
 
-      final path = Path();
-      path.moveTo(
-        center.dx + innerRadius * cos(rad),
-        center.dy + innerRadius * sin(rad),
-      );
-      path.lineTo(
-        center.dx + outerRadius * cos(rad),
-        center.dy + outerRadius * sin(rad),
-      );
-      path.lineTo(
-        center.dx + outerRadius * cos(nextRad),
-        center.dy + outerRadius * sin(nextRad),
-      );
-      path.lineTo(
-        center.dx + innerRadius * cos(nextRad),
-        center.dy + innerRadius * sin(nextRad),
-      );
-      path.close();
+    canvas.save();
+    final ringPath = Path()
+      ..fillType = PathFillType.evenOdd
+      ..addOval(Rect.fromCircle(center: center, radius: outerRadius))
+      ..addOval(Rect.fromCircle(center: center, radius: innerRadius));
+    canvas.clipPath(ringPath);
 
-      final color = HSLColor.fromAHSL(1, angle.toDouble(), 1, 0.5).toColor();
-      canvas.drawPath(path, Paint()..color = color);
-    }
+    final shader = SweepGradient(
+      colors: const [
+        Color(0xFFFF0000),
+        Color(0xFFFFFF00),
+        Color(0xFF00FF00),
+        Color(0xFF00FFFF),
+        Color(0xFF0000FF),
+        Color(0xFFFF00FF),
+        Color(0xFFFF0000),
+      ],
+    ).createShader(wheelRect);
+    canvas.drawCircle(center, outerRadius, Paint()..shader = shader);
+    canvas.restore();
 
-    // Draw saturation/brightness overlay
+    // Draw saturation overlay (white center → transparent)
     final gradientPaint = Paint()
       ..shader = RadialGradient(
         colors: [

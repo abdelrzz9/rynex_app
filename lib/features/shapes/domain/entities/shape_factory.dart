@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../value_objects/fill_style.dart';
 import '../value_objects/roughness.dart';
@@ -15,6 +15,26 @@ import 'shape.dart';
 import 'shape_entity.dart';
 import 'text_shape.dart';
 import 'triangle_shape.dart';
+
+class _ShapeBaseFields {
+  final String id;
+  final double rotation;
+  final ShapeStyle style;
+  final LayerInfo layer;
+  final bool isLocked;
+  final bool isVisible;
+  final DateTime createdAt;
+
+  _ShapeBaseFields({
+    required this.id,
+    required this.rotation,
+    required this.style,
+    required this.layer,
+    required this.isLocked,
+    required this.isVisible,
+    required this.createdAt,
+  });
+}
 
 class ShapeFactory {
   static ShapeEntity fromJson(Map<String, dynamic> json) {
@@ -44,6 +64,18 @@ class ShapeFactory {
       default:
         return _parseRectangle(json);
     }
+  }
+
+  static _ShapeBaseFields _parseBaseFields(Map<String, dynamic> json) {
+    return _ShapeBaseFields(
+      id: json['id'] as String,
+      rotation: (json['rotation'] as num?)?.toDouble() ?? 0.0,
+      style: _parseStyle(json),
+      layer: _parseLayer(json),
+      isLocked: json['isLocked'] as bool? ?? false,
+      isVisible: json['isVisible'] as bool? ?? true,
+      createdAt: _parseDate(json),
+    );
   }
 
   static ShapeStyle _parseStyle(Map<String, dynamic> json) {
@@ -84,75 +116,79 @@ class ShapeFactory {
   }
 
   static RectangleShape _parseRectangle(Map<String, dynamic> json) {
+    final f = _parseBaseFields(json);
     return RectangleShape(
-      id: json['id'] as String,
+      id: f.id,
       boundingBox: Rect.fromLTWH(
         (json['x'] as num).toDouble(),
         (json['y'] as num).toDouble(),
         (json['width'] as num).toDouble(),
         (json['height'] as num).toDouble(),
       ),
-      rotation: (json['rotation'] as num?)?.toDouble() ?? 0.0,
-      style: _parseStyle(json),
-      layer: _parseLayer(json),
-      isLocked: json['isLocked'] as bool? ?? false,
-      isVisible: json['isVisible'] as bool? ?? true,
-      createdAt: _parseDate(json),
+      rotation: f.rotation,
+      style: f.style,
+      layer: f.layer,
+      isLocked: f.isLocked,
+      isVisible: f.isVisible,
+      createdAt: f.createdAt,
       cornerRadius: (json['cornerRadius'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
   static EllipseShape _parseEllipse(Map<String, dynamic> json) {
+    final f = _parseBaseFields(json);
     return EllipseShape(
-      id: json['id'] as String,
+      id: f.id,
       boundingBox: Rect.fromLTWH(
         (json['x'] as num).toDouble(),
         (json['y'] as num).toDouble(),
         (json['width'] as num).toDouble(),
         (json['height'] as num).toDouble(),
       ),
-      rotation: (json['rotation'] as num?)?.toDouble() ?? 0.0,
-      style: _parseStyle(json),
-      layer: _parseLayer(json),
-      isLocked: json['isLocked'] as bool? ?? false,
-      isVisible: json['isVisible'] as bool? ?? true,
-      createdAt: _parseDate(json),
+      rotation: f.rotation,
+      style: f.style,
+      layer: f.layer,
+      isLocked: f.isLocked,
+      isVisible: f.isVisible,
+      createdAt: f.createdAt,
     );
   }
 
   static DiamondShape _parseDiamond(Map<String, dynamic> json) {
+    final f = _parseBaseFields(json);
     return DiamondShape(
-      id: json['id'] as String,
+      id: f.id,
       boundingBox: Rect.fromLTWH(
         (json['x'] as num).toDouble(),
         (json['y'] as num).toDouble(),
         (json['width'] as num).toDouble(),
         (json['height'] as num).toDouble(),
       ),
-      rotation: (json['rotation'] as num?)?.toDouble() ?? 0.0,
-      style: _parseStyle(json),
-      layer: _parseLayer(json),
-      isLocked: json['isLocked'] as bool? ?? false,
-      isVisible: json['isVisible'] as bool? ?? true,
-      createdAt: _parseDate(json),
+      rotation: f.rotation,
+      style: f.style,
+      layer: f.layer,
+      isLocked: f.isLocked,
+      isVisible: f.isVisible,
+      createdAt: f.createdAt,
     );
   }
 
   static TriangleShape _parseTriangle(Map<String, dynamic> json) {
+    final f = _parseBaseFields(json);
     return TriangleShape(
-      id: json['id'] as String,
+      id: f.id,
       boundingBox: Rect.fromLTWH(
         (json['x'] as num).toDouble(),
         (json['y'] as num).toDouble(),
         (json['width'] as num).toDouble(),
         (json['height'] as num).toDouble(),
       ),
-      rotation: (json['rotation'] as num?)?.toDouble() ?? 0.0,
-      style: _parseStyle(json),
-      layer: _parseLayer(json),
-      isLocked: json['isLocked'] as bool? ?? false,
-      isVisible: json['isVisible'] as bool? ?? true,
-      createdAt: _parseDate(json),
+      rotation: f.rotation,
+      style: f.style,
+      layer: f.layer,
+      isLocked: f.isLocked,
+      isVisible: f.isVisible,
+      createdAt: f.createdAt,
       direction: json['direction'] != null
           ? TriangleDirection.values.firstWhere((d) => d.name == json['direction'])
           : TriangleDirection.up,
@@ -160,27 +196,29 @@ class ShapeFactory {
   }
 
   static PolygonShape _parsePolygon(Map<String, dynamic> json) {
+    final f = _parseBaseFields(json);
     return PolygonShape(
-      id: json['id'] as String,
+      id: f.id,
       boundingBox: Rect.fromLTWH(
         (json['x'] as num).toDouble(),
         (json['y'] as num).toDouble(),
         (json['width'] as num).toDouble(),
         (json['height'] as num).toDouble(),
       ),
-      rotation: (json['rotation'] as num?)?.toDouble() ?? 0.0,
-      style: _parseStyle(json),
-      layer: _parseLayer(json),
-      isLocked: json['isLocked'] as bool? ?? false,
-      isVisible: json['isVisible'] as bool? ?? true,
-      createdAt: _parseDate(json),
+      rotation: f.rotation,
+      style: f.style,
+      layer: f.layer,
+      isLocked: f.isLocked,
+      isVisible: f.isVisible,
+      createdAt: f.createdAt,
       sides: (json['sides'] as num?)?.toInt() ?? 6,
     );
   }
 
   static LineShape _parseLine(Map<String, dynamic> json) {
+    final f = _parseBaseFields(json);
     return LineShape(
-      id: json['id'] as String,
+      id: f.id,
       startPoint: Offset(
         (json['startX'] as num).toDouble(),
         (json['startY'] as num).toDouble(),
@@ -189,17 +227,18 @@ class ShapeFactory {
         (json['endX'] as num).toDouble(),
         (json['endY'] as num).toDouble(),
       ),
-      style: _parseStyle(json),
-      layer: _parseLayer(json),
-      isLocked: json['isLocked'] as bool? ?? false,
-      isVisible: json['isVisible'] as bool? ?? true,
-      createdAt: _parseDate(json),
+      style: f.style,
+      layer: f.layer,
+      isLocked: f.isLocked,
+      isVisible: f.isVisible,
+      createdAt: f.createdAt,
     );
   }
 
   static ArrowShape _parseArrow(Map<String, dynamic> json) {
+    final f = _parseBaseFields(json);
     return ArrowShape(
-      id: json['id'] as String,
+      id: f.id,
       startPoint: Offset(
         (json['startX'] as num).toDouble(),
         (json['startY'] as num).toDouble(),
@@ -214,15 +253,16 @@ class ShapeFactory {
       endArrowhead: json['endArrowhead'] != null
           ? ArrowheadStyle.values.firstWhere((a) => a.name == json['endArrowhead'])
           : ArrowheadStyle.triangle,
-      style: _parseStyle(json),
-      layer: _parseLayer(json),
-      isLocked: json['isLocked'] as bool? ?? false,
-      isVisible: json['isVisible'] as bool? ?? true,
-      createdAt: _parseDate(json),
+      style: f.style,
+      layer: f.layer,
+      isLocked: f.isLocked,
+      isVisible: f.isVisible,
+      createdAt: f.createdAt,
     );
   }
 
   static FreehandShape _parseFreehand(Map<String, dynamic> json) {
+    final f = _parseBaseFields(json);
     final points = (json['points'] as List).map((p) {
       final pt = p as Map<String, dynamic>;
       return Offset(
@@ -231,27 +271,28 @@ class ShapeFactory {
       );
     }).toList();
     return FreehandShape(
-      id: json['id'] as String,
+      id: f.id,
       points: points,
       isClosed: json['isClosed'] as bool? ?? false,
-      style: _parseStyle(json),
-      layer: _parseLayer(json),
-      isLocked: json['isLocked'] as bool? ?? false,
-      isVisible: json['isVisible'] as bool? ?? true,
-      createdAt: _parseDate(json),
+      style: f.style,
+      layer: f.layer,
+      isLocked: f.isLocked,
+      isVisible: f.isVisible,
+      createdAt: f.createdAt,
     );
   }
 
   static TextShape _parseText(Map<String, dynamic> json) {
+    final f = _parseBaseFields(json);
     return TextShape(
-      id: json['id'] as String,
+      id: f.id,
       boundingBox: Rect.fromLTWH(
         (json['x'] as num).toDouble(),
         (json['y'] as num).toDouble(),
         (json['width'] as num).toDouble(),
         (json['height'] as num).toDouble(),
       ),
-      rotation: (json['rotation'] as num?)?.toDouble() ?? 0.0,
+      rotation: f.rotation,
       text: json['text'] as String? ?? '',
       fontFamily: json['fontFamily'] as String? ?? 'Roboto',
       fontSize: (json['fontSize'] as num?)?.toDouble() ?? 20.0,
@@ -263,34 +304,42 @@ class ShapeFactory {
         (a) => a.name == json['textAlign'],
         orElse: () => TextAlign.left,
       ),
-      style: _parseStyle(json),
-      layer: _parseLayer(json),
-      isLocked: json['isLocked'] as bool? ?? false,
-      isVisible: json['isVisible'] as bool? ?? true,
-      createdAt: _parseDate(json),
+      style: f.style,
+      layer: f.layer,
+      isLocked: f.isLocked,
+      isVisible: f.isVisible,
+      createdAt: f.createdAt,
     );
   }
 
   static ImageShape _parseImage(Map<String, dynamic> json) {
+    final imageBytesStr = json['imageBytes'] as String?;
+    if (imageBytesStr == null || imageBytesStr.isEmpty) {
+      throw ArgumentError(
+        'Image shape "${json['id']}" is missing required field "imageBytes". '
+        'The project file may be corrupted or from an older version.',
+      );
+    }
+    final f = _parseBaseFields(json);
     return ImageShape(
-      id: json['id'] as String,
+      id: f.id,
       boundingBox: Rect.fromLTWH(
         (json['x'] as num).toDouble(),
         (json['y'] as num).toDouble(),
         (json['width'] as num).toDouble(),
         (json['height'] as num).toDouble(),
       ),
-      rotation: (json['rotation'] as num?)?.toDouble() ?? 0.0,
-      imageBytes: Uint8List(0),
+      rotation: f.rotation,
+      imageBytes: base64Decode(imageBytesStr),
       originalSize: Size(
         ((json['originalWidth'] as num?) ?? json['width'] as num).toDouble(),
         ((json['originalHeight'] as num?) ?? json['height'] as num).toDouble(),
       ),
-      style: _parseStyle(json),
-      layer: _parseLayer(json),
-      isLocked: json['isLocked'] as bool? ?? false,
-      isVisible: json['isVisible'] as bool? ?? true,
-      createdAt: _parseDate(json),
+      style: f.style,
+      layer: f.layer,
+      isLocked: f.isLocked,
+      isVisible: f.isVisible,
+      createdAt: f.createdAt,
     );
   }
 }

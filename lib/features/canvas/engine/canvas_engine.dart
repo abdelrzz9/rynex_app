@@ -39,6 +39,7 @@ class CanvasEngine extends CustomPainter {
 
   final PictureRecorderManager? pictureCache;
   final DirtyRegionTracker? dirtyRegionTracker;
+  final Map<String, Offset> dragOverrides;
 
   CanvasEngine({
     required this.shapes,
@@ -55,6 +56,7 @@ class CanvasEngine extends CustomPainter {
     this.canvasHeight = 1100,
     this.pictureCache,
     this.dirtyRegionTracker,
+    this.dragOverrides = const {},
   });
 
   @override
@@ -79,7 +81,9 @@ class CanvasEngine extends CustomPainter {
 
     final visibleShapes = shapes.where((s) {
       if (!s.isVisible) return false;
-      return viewportRect.overlaps(s.rotatedBoundingBox);
+      final override = dragOverrides[s.id];
+      final checkBox = override != null ? s.rotatedBoundingBox.translate(override.dx, override.dy) : s.rotatedBoundingBox;
+      return viewportRect.overlaps(checkBox);
     }).toList()
       ..sort((a, b) => a.layer.order.compareTo(b.layer.order));
 
@@ -144,59 +148,62 @@ class CanvasEngine extends CustomPainter {
   }
 
   void _paintShape(Canvas canvas, ShapeEntity shape) {
+    final dragOffset = dragOverrides[shape.id];
+
+    ui.Picture picture;
     final cached = pictureCache?.get(shape.id);
     if (cached != null) {
-      canvas.save();
-      canvas.drawPicture(cached);
-      canvas.restore();
-      return;
-    }
+      picture = cached;
+    } else {
+      final recorder = ui.PictureRecorder();
+      final recordCanvas = Canvas(recorder);
+      recordCanvas.save();
 
-    final recorder = ui.PictureRecorder();
-    final recordCanvas = Canvas(recorder);
-    recordCanvas.save();
+      if (shape.style.opacity < 1.0) {
+        recordCanvas.saveLayer(shape.rotatedBoundingBox, Paint()..color = Color.fromRGBO(0, 0, 0, shape.style.opacity));
+      }
 
-    if (shape.style.opacity < 1.0) {
-      recordCanvas.saveLayer(shape.rotatedBoundingBox, Paint()..color = Color.fromRGBO(0, 0, 0, shape.style.opacity));
-    }
+      recordCanvas.translate(shape.center.dx, shape.center.dy);
+      recordCanvas.rotate(shape.rotation);
+      recordCanvas.translate(-shape.center.dx, -shape.center.dy);
 
-    recordCanvas.translate(shape.center.dx, shape.center.dy);
-    recordCanvas.rotate(shape.rotation);
-    recordCanvas.translate(-shape.center.dx, -shape.center.dy);
+      switch (shape.type) {
+        case ShapeType.rectangle:
+        case ShapeType.roundedRect:
+          _paintRectangle(recordCanvas, shape as RectangleShape);
+        case ShapeType.ellipse:
+          _paintEllipse(recordCanvas, shape as EllipseShape);
+        case ShapeType.diamond:
+          _paintDiamond(recordCanvas, shape as DiamondShape);
+        case ShapeType.triangle:
+          _paintTriangle(recordCanvas, shape as TriangleShape);
+        case ShapeType.line:
+          _paintLine(recordCanvas, shape as LineShape);
+        case ShapeType.arrow:
+          _paintArrow(recordCanvas, shape as ArrowShape);
+        case ShapeType.freehand:
+          _paintFreehand(recordCanvas, shape as FreehandShape);
+        case ShapeType.polygon:
+          _paintPolygon(recordCanvas, shape as PolygonShape);
+        case ShapeType.text:
+          _paintText(recordCanvas, shape as TextShape);
+        case ShapeType.image:
+          _paintImage(recordCanvas, shape as ImageShape);
+      }
 
-    switch (shape.type) {
-      case ShapeType.rectangle:
-      case ShapeType.roundedRect:
-        _paintRectangle(recordCanvas, shape as RectangleShape);
-      case ShapeType.ellipse:
-        _paintEllipse(recordCanvas, shape as EllipseShape);
-      case ShapeType.diamond:
-        _paintDiamond(recordCanvas, shape as DiamondShape);
-      case ShapeType.triangle:
-        _paintTriangle(recordCanvas, shape as TriangleShape);
-      case ShapeType.line:
-        _paintLine(recordCanvas, shape as LineShape);
-      case ShapeType.arrow:
-        _paintArrow(recordCanvas, shape as ArrowShape);
-      case ShapeType.freehand:
-        _paintFreehand(recordCanvas, shape as FreehandShape);
-      case ShapeType.polygon:
-        _paintPolygon(recordCanvas, shape as PolygonShape);
-      case ShapeType.text:
-        _paintText(recordCanvas, shape as TextShape);
-      case ShapeType.image:
-        _paintImage(recordCanvas, shape as ImageShape);
-    }
-
-    if (shape.style.opacity < 1.0) {
+      if (shape.style.opacity < 1.0) {
+        recordCanvas.restore();
+      }
       recordCanvas.restore();
-    }
-    recordCanvas.restore();
 
-    final picture = recorder.endRecording();
-    pictureCache?.cache(shape.id, picture);
+      picture = recorder.endRecording();
+      pictureCache?.cache(shape.id, picture);
+    }
 
     canvas.save();
+    if (dragOffset != null) {
+      canvas.translate(dragOffset.dx, dragOffset.dy);
+    }
     canvas.drawPicture(picture);
     canvas.restore();
   }
@@ -229,10 +236,6 @@ class CanvasEngine extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round;
 
-      if (shape.style.strokeStyle == StrokeStyle.dashed) {
-        strokePaint.strokeWidth = shape.style.strokeWidth;
-      }
-
       final jittered = Rect.fromLTWH(
         rect.left + _jitter(rng, jitter),
         rect.top + _jitter(rng, jitter),
@@ -240,10 +243,10 @@ class CanvasEngine extends CustomPainter {
         rect.height + _jitter(rng, jitter),
       );
 
-      canvas.drawRRect(
+      final path = Path()..addRRect(
         RRect.fromRectAndRadius(jittered, Radius.circular(shape.cornerRadius + _jitter(rng, jitter))),
-        strokePaint,
       );
+      canvas.drawPath(applyStrokeStyle(strokePaint, path, shape.style.strokeStyle), strokePaint);
     }
   }
 
@@ -273,7 +276,8 @@ class CanvasEngine extends CustomPainter {
         rect.width + _jitter(rng, jitter),
         rect.height + _jitter(rng, jitter),
       );
-      canvas.drawOval(jittered, strokePaint);
+      final path = Path()..addOval(jittered);
+      canvas.drawPath(applyStrokeStyle(strokePaint, path, shape.style.strokeStyle), strokePaint);
     }
   }
 
@@ -315,7 +319,7 @@ class CanvasEngine extends CustomPainter {
         rect.width + _jitter(rng, jitter),
         rect.height + _jitter(rng, jitter),
       );
-      canvas.drawPath(diamondPath(jittered), strokePaint);
+      canvas.drawPath(applyStrokeStyle(strokePaint, diamondPath(jittered), shape.style.strokeStyle), strokePaint);
     }
   }
 
@@ -358,7 +362,7 @@ class CanvasEngine extends CustomPainter {
         rect.width + _jitter(rng, jitter),
         rect.height + _jitter(rng, jitter),
       );
-      canvas.drawPath(trianglePath(jittered), strokePaint);
+      canvas.drawPath(applyStrokeStyle(strokePaint, trianglePath(jittered), shape.style.strokeStyle), strokePaint);
     }
   }
 
@@ -383,7 +387,7 @@ class CanvasEngine extends CustomPainter {
       ..strokeWidth = shape.style.strokeWidth
       ..style = PaintingStyle.stroke;
 
-    canvas.drawPath(path, strokePaint);
+    canvas.drawPath(applyStrokeStyle(strokePaint, path, shape.style.strokeStyle), strokePaint);
   }
 
   void _paintLine(Canvas canvas, LineShape shape) {
@@ -398,18 +402,16 @@ class CanvasEngine extends CustomPainter {
         ..strokeWidth = shape.style.strokeWidth
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round;
-      _applyStrokeStyle(strokePaint, shape.style.strokeStyle);
-      canvas.drawLine(
-        Offset(
-          shape.startPoint.dx + _jitter(rng, jitter),
-          shape.startPoint.dy + _jitter(rng, jitter),
-        ),
-        Offset(
-          shape.endPoint.dx + _jitter(rng, jitter),
-          shape.endPoint.dy + _jitter(rng, jitter),
-        ),
-        strokePaint,
+      final start = Offset(
+        shape.startPoint.dx + _jitter(rng, jitter),
+        shape.startPoint.dy + _jitter(rng, jitter),
       );
+      final end = Offset(
+        shape.endPoint.dx + _jitter(rng, jitter),
+        shape.endPoint.dy + _jitter(rng, jitter),
+      );
+      final path = Path()..moveTo(start.dx, start.dy)..lineTo(end.dx, end.dy);
+      canvas.drawPath(applyStrokeStyle(strokePaint, path, shape.style.strokeStyle), strokePaint);
     }
   }
 
@@ -425,7 +427,6 @@ class CanvasEngine extends CustomPainter {
         ..strokeWidth = shape.style.strokeWidth
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round;
-      _applyStrokeStyle(strokePaint, shape.style.strokeStyle);
 
       final start = Offset(
         shape.startPoint.dx + _jitter(rng, jitter),
@@ -435,7 +436,8 @@ class CanvasEngine extends CustomPainter {
         shape.endPoint.dx + _jitter(rng, jitter),
         shape.endPoint.dy + _jitter(rng, jitter),
       );
-      canvas.drawLine(start, end, strokePaint);
+      final path = Path()..moveTo(start.dx, start.dy)..lineTo(end.dx, end.dy);
+      canvas.drawPath(applyStrokeStyle(strokePaint, path, shape.style.strokeStyle), strokePaint);
 
       if (i == 0) {
         final angle = atan2(end.dy - start.dy, end.dx - start.dx);
@@ -529,7 +531,7 @@ class CanvasEngine extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round;
-      canvas.drawPath(path, strokePaint);
+      canvas.drawPath(applyStrokeStyle(strokePaint, path, shape.style.strokeStyle), strokePaint);
     }
   }
 
@@ -618,15 +620,28 @@ class CanvasEngine extends CustomPainter {
     }
   }
 
-  void _applyStrokeStyle(Paint paint, StrokeStyle style) {
+  Path dashPath(Path source, double dashLength, double gapLength) {
+    final result = Path();
+    for (final metric in source.computeMetrics()) {
+      double distance = 0;
+      while (distance < metric.length) {
+        final end = min(distance + dashLength, metric.length);
+        result.addPath(metric.extractPath(distance, end), Offset.zero);
+        distance = end + gapLength;
+      }
+    }
+    return result;
+  }
+
+  Path applyStrokeStyle(Paint paint, Path path, StrokeStyle style) {
     switch (style) {
       case StrokeStyle.solid:
-        break;
+        return path;
       case StrokeStyle.dashed:
-        // Handled via path effects not directly available on Painter
-        break;
+        return dashPath(path, paint.strokeWidth * 4, paint.strokeWidth * 2);
       case StrokeStyle.dotted:
-        break;
+        paint.strokeCap = StrokeCap.round;
+        return dashPath(path, paint.strokeWidth, paint.strokeWidth * 2);
     }
   }
 
@@ -749,6 +764,9 @@ class CanvasEngine extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CanvasEngine oldDelegate) {
+    // pictureCache and dirtyRegionTracker are long-lived singletons injected
+    // from the same provider — their identity never changes between frames,
+    // so comparing them by reference is always false and would mask misses.
     return oldDelegate.shapes != shapes ||
         oldDelegate.transform != transform ||
         oldDelegate.selection != selection ||
@@ -759,7 +777,8 @@ class CanvasEngine extends CustomPainter {
         oldDelegate.activeDrawingStyle != activeDrawingStyle ||
         oldDelegate.activeShapeType != activeShapeType ||
         oldDelegate.activeDrawingPoints != activeDrawingPoints ||
-        oldDelegate.pictureCache != pictureCache ||
-        oldDelegate.dirtyRegionTracker != dirtyRegionTracker;
+        oldDelegate.canvasWidth != canvasWidth ||
+        oldDelegate.canvasHeight != canvasHeight ||
+        oldDelegate.dragOverrides != dragOverrides;
   }
 }

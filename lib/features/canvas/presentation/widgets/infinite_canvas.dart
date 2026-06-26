@@ -8,6 +8,7 @@ import '../../engine/dirty_region_tracker.dart';
 import '../../engine/picture_recorder_manager.dart';
 import '../providers/active_drawing_provider.dart';
 import '../providers/canvas_provider.dart';
+import '../providers/drag_offset_provider.dart';
 
 class InfiniteCanvas extends ConsumerStatefulWidget {
   const InfiniteCanvas({super.key});
@@ -47,6 +48,7 @@ class _InfiniteCanvasState extends ConsumerState<InfiniteCanvas> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final pictureCache = ref.watch(pictureRecorderManagerProvider);
     final activeDrawing = ref.watch(activeDrawingProvider);
+    final dragOverrides = ref.watch(dragOffsetProvider);
 
     _markChangedShapes(shapes, pictureCache);
 
@@ -64,6 +66,7 @@ class _InfiniteCanvasState extends ConsumerState<InfiniteCanvas> {
             canvasHeight: canvasState.canvasHeight,
             pictureCache: pictureCache,
             dirtyRegionTracker: _dirtyRegionTracker,
+            dragOverrides: dragOverrides,
             activeDrawingStart: activeDrawing.start,
             activeDrawingEnd: activeDrawing.end,
             activeDrawingStyle: activeDrawing.style,

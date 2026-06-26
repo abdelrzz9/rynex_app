@@ -1,12 +1,17 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:share_plus/share_plus.dart';
 import '../../features/canvas/domain/entities/canvas_transform.dart';
 import '../../features/shapes/domain/entities/shape_entity.dart';
+
+enum ExportFormat { png, jpg, pdf }
 
 class ExportService {
   Future<void> exportPng(
@@ -17,18 +22,18 @@ class ExportService {
     double canvasHeight = 1100,
     CanvasTransform? transform,
   }) async {
-    final boundary = repaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-    if (boundary == null) return;
-
-    final image = await boundary.toImage(pixelRatio: 2.0);
-    final imageBytes = await _cropToCanvas(image, canvasWidth, canvasHeight, transform);
+    final imageBytes = await _renderBoundaryToBytes(
+      repaintKey, 2.0, ExportFormat.png,
+      canvasWidth: canvasWidth,
+      canvasHeight: canvasHeight,
+      transform: transform,
+    );
     if (imageBytes == null) return;
 
     final dir = await getTemporaryDirectory();
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final file = File('${dir.path}/rynex_export_$timestamp.png');
     await file.writeAsBytes(imageBytes);
-
     await _shareFile(file);
   }
 
@@ -40,19 +45,18 @@ class ExportService {
     double canvasHeight = 1100,
     CanvasTransform? transform,
   }) async {
-    final boundary = repaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-    if (boundary == null) return;
-
-    final image = await boundary.toImage(pixelRatio: 2.0);
-    final imageBytes = await _cropToCanvas(image, canvasWidth, canvasHeight, transform);
+    final imageBytes = await _renderBoundaryToBytes(
+      repaintKey, 2.0, ExportFormat.jpg,
+      canvasWidth: canvasWidth,
+      canvasHeight: canvasHeight,
+      transform: transform,
+    );
     if (imageBytes == null) return;
 
     final dir = await getTemporaryDirectory();
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final file = File('${dir.path}/rynex_export_$timestamp.jpg');
-
     await file.writeAsBytes(imageBytes);
-
     await _shareFile(file);
   }
 
@@ -64,20 +68,47 @@ class ExportService {
     double canvasHeight = 1100,
     CanvasTransform? transform,
   }) async {
-    final boundary = repaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-    if (boundary == null) return;
-
-    final image = await boundary.toImage(pixelRatio: 2.0);
-    final imageBytes = await _cropToCanvas(image, canvasWidth, canvasHeight, transform);
+    final imageBytes = await _renderBoundaryToBytes(
+      repaintKey, 2.0, ExportFormat.pdf,
+      canvasWidth: canvasWidth,
+      canvasHeight: canvasHeight,
+      transform: transform,
+    );
     if (imageBytes == null) return;
+
+    final pdf = pw.Document();
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat(canvasWidth, canvasHeight, marginAll: 0),
+        build: (context) => pw.Image(
+          pw.MemoryImage(imageBytes),
+          fit: pw.BoxFit.fill,
+          width: canvasWidth,
+          height: canvasHeight,
+        ),
+      ),
+    );
 
     final dir = await getTemporaryDirectory();
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final file = File('${dir.path}/rynex_export_$timestamp.pdf');
-
-    await file.writeAsBytes(imageBytes);
-
+    await file.writeAsBytes(await pdf.save());
     await _shareFile(file);
+  }
+
+  Future<Uint8List?> _renderBoundaryToBytes(
+    GlobalKey key,
+    double pixelRatio,
+    ExportFormat format, {
+    double canvasWidth = 800,
+    double canvasHeight = 1100,
+    CanvasTransform? transform,
+  }) async {
+    final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+    if (boundary == null) return null;
+
+    final image = await boundary.toImage(pixelRatio: pixelRatio);
+    return _cropToCanvas(image, canvasWidth, canvasHeight, transform);
   }
 
   Future<Uint8List?> _cropToCanvas(
@@ -137,14 +168,32 @@ class ExportService {
   }
 
   Future<void> _shareFile(File file) async {
-    try {
-      final downloads = Directory('/storage/emulated/0/Download');
-      if (await downloads.exists()) {
-        await file.copy('${downloads.path}/${file.path.split('/').last}');
-      }
-    } on Exception catch (_) {}
+    final fileName = file.path.split(Platform.pathSeparator).last;
 
-    debugPrint('Exported to: ${file.path}');
+    if (kIsWeb) {
+      await Share.shareXFiles([XFile(file.path)]);
+      debugPrint('Exported: ${file.path}');
+      return;
+    }
+
+    try {
+      if (Platform.isAndroid || Platform.isIOS) {
+        await Share.shareXFiles([XFile(file.path)]);
+      } else {
+        final downloadsDir = await getDownloadsDirectory();
+        if (downloadsDir != null) {
+          await file.copy('${downloadsDir.path}/$fileName');
+        } else {
+          final docsDir = await getApplicationDocumentsDirectory();
+          await file.copy('${docsDir.path}/$fileName');
+        }
+      }
+    } on Exception catch (e) {
+      debugPrint('Export failed: $e');
+      rethrow;
+    }
+
+    debugPrint('Exported: ${file.path}');
   }
 
   static Rect calculateContentBounds(List<ShapeEntity> shapes) {

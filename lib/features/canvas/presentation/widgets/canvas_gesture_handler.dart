@@ -8,6 +8,9 @@ import '../../../../core/constants/canvas_constants.dart';
 import '../../../../core/constants/tool_constants.dart';
 import '../../../../core/utils/geometry_utils.dart';
 import '../../../../core/utils/uuid_generator.dart';
+import '../../../history/domain/commands/command.dart';
+import '../../../history/domain/commands/composite_command.dart';
+import '../../../history/domain/commands/modify_shape_command.dart';
 import '../../../history/presentation/providers/history_provider.dart';
 import '../../../layers/domain/entities/layer.dart';
 import '../../../layers/presentation/providers/layer_provider.dart';
@@ -30,6 +33,7 @@ import '../../../shapes/presentation/providers/active_tool_provider.dart';
 import '../../../shapes/presentation/providers/shape_provider.dart';
 import '../providers/active_drawing_provider.dart';
 import '../providers/canvas_provider.dart';
+import '../providers/drag_offset_provider.dart';
 
 class CanvasGestureHandler extends ConsumerStatefulWidget {
   final Widget child;
@@ -45,7 +49,7 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
   Offset? _drawStart;
   Offset? _drawCurrent;
   List<Offset> _freehandPoints = [];
-  Offset? _selectionDragStart;
+  Offset? _initialDragStart;
   Map<String, Offset> _selectedShapePositions = {};
   Offset? _panStart;
 
@@ -110,12 +114,13 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
     _drawStart = null;
     _drawCurrent = null;
     _freehandPoints = [];
-    _selectionDragStart = null;
+    _initialDragStart = null;
     _selectedShapePositions = {};
     _resizeShapeId = null;
     _resizeOldState = null;
     _resizeStartWorldPoint = null;
 
+    ref.read(dragOffsetProvider.notifier).state = {};
     ref.read(activeDrawingProvider.notifier).state = const ActiveDrawingState();
   }
 
@@ -250,7 +255,7 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
         ref.read(selectionProvider.notifier).select(hitShape.id);
       }
 
-      _selectionDragStart = worldPoint;
+      _initialDragStart = worldPoint;
       _selectedShapePositions = {};
       final selectedIds = ref.read(selectionProvider).selectedIds;
       for (final s in shapes) {
@@ -262,7 +267,7 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
       if (!_isShiftPressed) {
         ref.read(selectionProvider.notifier).deselectAll();
       }
-      _selectionDragStart = worldPoint;
+      _initialDragStart = worldPoint;
       ref.read(selectionProvider.notifier).startMarquee(details.localFocalPoint);
     }
   }
@@ -280,17 +285,13 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
 
     if (selection.hasMarquee) {
       ref.read(selectionProvider.notifier).updateMarquee(details.localFocalPoint);
-    } else if (selection.isNotEmpty && _selectionDragStart != null) {
-      final delta = worldPoint - _selectionDragStart!;
-      final shapes = ref.read(shapeListProvider);
-
-      for (final entry in _selectedShapePositions.entries) {
-        final shape = shapes.firstWhere((s) => s.id == entry.key);
-        final newBox = shape.boundingBox.translate(delta.dx, delta.dy);
-        final updated = shape.copyWith(boundingBox: newBox);
-        ref.read(shapeListProvider.notifier).updateShape(shape.id, updated);
+    } else if (selection.isNotEmpty && _initialDragStart != null) {
+      final totalDelta = worldPoint - _initialDragStart!;
+      final overrides = <String, Offset>{};
+      for (final id in _selectedShapePositions.keys) {
+        overrides[id] = totalDelta;
       }
-      _selectionDragStart = worldPoint;
+      ref.read(dragOffsetProvider.notifier).state = overrides;
     }
   }
 
@@ -371,6 +372,29 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
       _resizeOldState = null;
       _resizeStartWorldPoint = null;
       return;
+    }
+
+    final overrides = ref.read(dragOffsetProvider);
+    if (overrides.isNotEmpty) {
+      final shapes = ref.read(shapeListProvider);
+      final commands = <Command>[];
+      for (final entry in overrides.entries) {
+        final shape = shapes.firstWhere((s) => s.id == entry.key);
+        final newBoxOld = shape.boundingBox.translate(entry.value.dx, entry.value.dy);
+        final updated = shape.copyWith(boundingBox: newBoxOld);
+        commands.add(ModifyShapeCommand(
+          shapeId: entry.key,
+          oldState: shape,
+          newState: updated,
+          onUpdate: (id, s) => ref.read(shapeListProvider.notifier).updateShape(id, s),
+        ));
+      }
+      if (commands.length == 1) {
+        ref.read(historyProvider.notifier).execute(commands.first);
+      } else if (commands.length > 1) {
+        ref.read(historyProvider.notifier).execute(CompositeCommand(commands));
+      }
+      ref.read(dragOffsetProvider.notifier).state = {};
     }
 
     if (selection.hasMarquee) {
