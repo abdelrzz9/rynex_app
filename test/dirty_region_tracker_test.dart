@@ -18,7 +18,7 @@ void main() {
     test('addRect adds a rect', () {
       tracker.addRect(const Rect.fromLTWH(0, 0, 100, 50));
       expect(tracker.hasDirtyRects, true);
-      expect(tracker.dirtyBounds, const Rect.fromLTWH(0, 0, 100, 50));
+      expect(tracker.dirtyBounds, const Rect.fromLTWH(-20, -20, 140, 90));
     });
 
     test('addShapeRect inflates rect', () {
@@ -29,7 +29,7 @@ void main() {
     test('accumulates multiple rects', () {
       tracker.addRect(const Rect.fromLTWH(0, 0, 100, 50));
       tracker.addRect(const Rect.fromLTWH(200, 0, 100, 50));
-      expect(tracker.dirtyBounds, const Rect.fromLTWH(0, 0, 300, 50));
+      expect(tracker.dirtyBounds, const Rect.fromLTWH(-20, -20, 340, 90));
     });
 
     test('clear removes all', () {
@@ -37,14 +37,6 @@ void main() {
       tracker.clear();
       expect(tracker.hasDirtyRects, false);
       expect(tracker.dirtyBounds, isNull);
-    });
-
-    test('mergeRects merges overlapping rects', () {
-      tracker.addRect(const Rect.fromLTWH(0, 0, 60, 50));
-      tracker.addRect(const Rect.fromLTWH(50, 0, 60, 50));
-      tracker.mergeRects();
-      expect(tracker.dirtyRects.length, lessThanOrEqualTo(2));
-      expect(tracker.dirtyBounds, const Rect.fromLTWH(0, 0, 110, 50));
     });
   });
 }

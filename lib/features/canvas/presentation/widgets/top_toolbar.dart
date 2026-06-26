@@ -5,10 +5,12 @@ import '../../../../core/di/injection_container.dart';
 import '../../../../core/services/export_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/uuid_generator.dart';
+import '../../../history/domain/commands/align_shapes_command.dart';
 import '../../../history/presentation/providers/history_provider.dart';
 import '../../../projects/domain/entities/project.dart';
 import '../../../projects/presentation/providers/active_project_provider.dart';
 import '../../../projects/presentation/providers/project_list_provider.dart';
+import '../../../selection/presentation/providers/selection_provider.dart';
 import '../../../settings/domain/entities/app_settings.dart';
 import '../../../settings/presentation/providers/settings_provider.dart';
 import '../../../shapes/presentation/providers/shape_provider.dart';
@@ -235,18 +237,39 @@ class TopToolbar extends ConsumerWidget {
       Offset.zero & overlayRenderBox.size,
     );
 
+    final selection = ref.read(selectionProvider);
+    final multiSelected = selection.selectedIds.length >= 2;
+
+    final items = <PopupMenuEntry<String>>[
+      const PopupMenuItem(value: 'save', child: Text('Save Project')),
+      const PopupMenuItem(value: 'duplicate', child: Text('Duplicate Project')),
+      const PopupMenuItem(value: 'canvas_size', child: Text('Canvas Size')),
+      const PopupMenuItem(value: 'clear', child: Text('Clear Canvas')),
+    ];
+
+    if (multiSelected) {
+      items.add(const PopupMenuDivider());
+      items.add(const PopupMenuItem(value: 'align_left', child: Text('Align Left')));
+      items.add(const PopupMenuItem(value: 'align_center_h', child: Text('Align Center H')));
+      items.add(const PopupMenuItem(value: 'align_right', child: Text('Align Right')));
+      items.add(const PopupMenuItem(value: 'align_top', child: Text('Align Top')));
+      items.add(const PopupMenuItem(value: 'align_center_v', child: Text('Align Center V')));
+      items.add(const PopupMenuItem(value: 'align_bottom', child: Text('Align Bottom')));
+      items.add(const PopupMenuItem(value: 'distribute_h', child: Text('Distribute H')));
+      items.add(const PopupMenuItem(value: 'distribute_v', child: Text('Distribute V')));
+    }
+
+    items.addAll([
+      const PopupMenuDivider(),
+      const PopupMenuItem(value: 'export_png', child: Text('Export as PNG')),
+      const PopupMenuItem(value: 'export_jpg', child: Text('Export as JPG')),
+      const PopupMenuItem(value: 'export_pdf', child: Text('Export as PDF')),
+    ]);
+
     final value = await showMenu(
       context: buttonContext,
       position: position,
-      items: [
-        const PopupMenuItem(value: 'save', child: Text('Save Project')),
-        const PopupMenuItem(value: 'duplicate', child: Text('Duplicate Project')),
-        const PopupMenuItem(value: 'canvas_size', child: Text('Canvas Size')),
-        const PopupMenuItem(value: 'clear', child: Text('Clear Canvas')),
-        const PopupMenuItem(value: 'export_png', child: Text('Export as PNG')),
-        const PopupMenuItem(value: 'export_jpg', child: Text('Export as JPG')),
-        const PopupMenuItem(value: 'export_pdf', child: Text('Export as PDF')),
-      ],
+      items: items,
     );
     if (!buttonContext.mounted) return;
     if (value == 'canvas_size') {
@@ -316,6 +339,31 @@ class TopToolbar extends ConsumerWidget {
           shapes, ExportService.calculateContentBounds(shapes), repaintKey,
           canvasWidth: cs.canvasWidth, canvasHeight: cs.canvasHeight, transform: cs.transform,
         );
+      } else if (value != null && value.toString().startsWith('align_') || value.toString().startsWith('distribute_')) {
+        final shapes = ref.read(shapeListProvider);
+        final selectedIds = ref.read(selectionProvider).selectedIds;
+        final selected = shapes.where((s) => selectedIds.contains(s.id)).toList();
+        if (selected.length < 2) return;
+
+        final alignment = switch (value) {
+          'align_left' => AlignmentType.left,
+          'align_center_h' => AlignmentType.centerH,
+          'align_right' => AlignmentType.right,
+          'align_top' => AlignmentType.top,
+          'align_center_v' => AlignmentType.centerV,
+          'align_bottom' => AlignmentType.bottom,
+          'distribute_h' => AlignmentType.distributeH,
+          'distribute_v' => AlignmentType.distributeV,
+          _ => null,
+        };
+        if (alignment == null) return;
+
+        final command = AlignShapesCommand(
+          shapes: selected,
+          alignment: alignment,
+          onUpdate: (id, s) => ref.read(shapeListProvider.notifier).updateShape(id, s),
+        );
+        ref.read(historyProvider.notifier).execute(command);
       }
   }
 }

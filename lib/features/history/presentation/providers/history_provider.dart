@@ -4,6 +4,7 @@ import '../../../../core/utils/uuid_generator.dart';
 import '../../../selection/presentation/providers/selection_provider.dart';
 import '../../../shapes/domain/entities/shape_entity.dart';
 import '../../../shapes/domain/entities/shape_factory.dart';
+import '../../../shapes/domain/entities/shape_type.dart';
 import '../../../shapes/presentation/providers/shape_provider.dart';
 import '../../domain/commands/add_shape_command.dart';
 import '../../domain/commands/command.dart';
@@ -50,7 +51,6 @@ class HistoryNotifier extends StateNotifier<HistoryState> {
         shape: shape,
         onAdd: (s) => _ref.read(shapeListProvider.notifier).addShape(s),
         onRemove: (id) => _ref.read(shapeListProvider.notifier).removeShape(id),
-        index: _ref.read(shapeListProvider).indexOf(shape),
       );
       execute(command);
     } else {
@@ -58,7 +58,6 @@ class HistoryNotifier extends StateNotifier<HistoryState> {
         shape: shape,
         onAdd: (s) => _ref.read(shapeListProvider.notifier).addShape(s),
         onRemove: (id) => _ref.read(shapeListProvider.notifier).removeShape(id),
-        index: _ref.read(shapeListProvider).indexOf(shape),
       ) as Command).toList();
       execute(CompositeCommand(commands));
     }
@@ -69,11 +68,28 @@ class HistoryNotifier extends StateNotifier<HistoryState> {
     final commands = <Command>[];
     for (final shape in shapes) {
       const offset = Offset(20, 20);
-      final newBox = shape.boundingBox.translate(offset.dx, offset.dy);
       final json = Map<String, dynamic>.from(shape.toJson());
       json['id'] = UuidGenerator.generate();
-      json['x'] = newBox.left;
-      json['y'] = newBox.top;
+
+      if (shape.type == ShapeType.line || shape.type == ShapeType.arrow) {
+        json['startX'] = (json['startX'] as num).toDouble() + offset.dx;
+        json['startY'] = (json['startY'] as num).toDouble() + offset.dy;
+        json['endX'] = (json['endX'] as num).toDouble() + offset.dx;
+        json['endY'] = (json['endY'] as num).toDouble() + offset.dy;
+      } else if (shape.type == ShapeType.freehand) {
+        final points = (json['points'] as List).map((p) {
+          final pt = p as Map<String, dynamic>;
+          return <String, dynamic>{
+            'x': (pt['x'] as num).toDouble() + offset.dx,
+            'y': (pt['y'] as num).toDouble() + offset.dy,
+          };
+        }).toList();
+        json['points'] = points;
+      } else {
+        json['x'] = (json['x'] as num).toDouble() + offset.dx;
+        json['y'] = (json['y'] as num).toDouble() + offset.dy;
+      }
+
       final dup = ShapeFactory.fromJson(json);
       commands.add(AddShapeCommand(
         shape: dup,

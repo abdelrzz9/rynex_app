@@ -6,13 +6,11 @@ class RemoveShapeCommand extends Command {
   final ShapeEntity shape;
   final void Function(ShapeEntity) onAdd;
   final void Function(String) onRemove;
-  final int index;
 
   RemoveShapeCommand({
     required this.shape,
     required this.onAdd,
     required this.onRemove,
-    required this.index,
   });
 
   @override

@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../history/domain/commands/remove_layer_command.dart';
+import '../../../history/presentation/providers/history_provider.dart';
 import '../../../shapes/domain/entities/shape_entity.dart';
 import '../../../shapes/presentation/providers/shape_provider.dart';
 import '../../domain/entities/layer.dart';
@@ -22,13 +24,24 @@ class LayerListNotifier extends StateNotifier<List<LayerEntity>> {
 
   void removeLayer(int id) {
     if (state.length <= 1) return;
-    final layer = state.firstWhere((l) => l.id == id);
+    final layer = state.firstWhere((l) => l.id == id, orElse: () => const LayerEntity(id: -1, name: '', order: -1));
+    if (layer.id == -1) return;
     final shapes = _ref.read(shapeListProvider);
-    final removedIds = shapes.where((s) => s.layer.order == layer.order).map((s) => s.id).toList();
-    if (removedIds.isNotEmpty) {
-      _ref.read(shapeListProvider.notifier).removeShapes(removedIds);
-    }
-    state = state.where((l) => l.id != id).toList();
+    final layerShapes = shapes.where((s) => s.layer.order == layer.order).toList();
+
+    final command = RemoveLayerCommand(
+      layer: layer,
+      shapes: layerShapes,
+      onAddLayer: (l) {
+        state = [...state, l];
+      },
+      onRemoveLayer: (layerId) {
+        state = state.where((l) => l.id != layerId).toList();
+      },
+      onAddShape: (s) => _ref.read(shapeListProvider.notifier).addShape(s),
+      onRemoveShape: (id) => _ref.read(shapeListProvider.notifier).removeShape(id),
+    );
+    _ref.read(historyProvider.notifier).execute(command);
   }
 
   void toggleVisibility(int id) {

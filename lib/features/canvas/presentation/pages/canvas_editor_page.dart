@@ -34,6 +34,21 @@ class _CanvasEditorPageState extends ConsumerState<CanvasEditorPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<String?>(saveErrorProvider, (prev, next) {
+      if (next != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next),
+            action: SnackBarAction(
+              label: 'Retry',
+              onPressed: () => ref.read(activeProjectProvider.notifier).saveNow(),
+            ),
+          ),
+        );
+        ref.read(saveErrorProvider.notifier).state = null;
+      }
+    });
+
     final screenWidth = MediaQuery.sizeOf(context).width;
     final isMobile = screenWidth < 600;
     final isTablet = screenWidth >= 600 && screenWidth < 1200;

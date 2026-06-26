@@ -41,8 +41,9 @@ class ShapeFactory {
     final type = json['type'] as String;
     switch (type) {
       case 'rectangle':
-      case 'roundedRect':
         return _parseRectangle(json);
+      case 'roundedRect':
+        return _parseRoundedRect(json);
       case 'ellipse':
         return _parseEllipse(json);
       case 'diamond':
@@ -132,6 +133,29 @@ class ShapeFactory {
       isVisible: f.isVisible,
       createdAt: f.createdAt,
       cornerRadius: (json['cornerRadius'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+
+  static RoundedRectShape _parseRoundedRect(Map<String, dynamic> json) {
+    final f = _parseBaseFields(json);
+    return RoundedRectShape(
+      id: f.id,
+      boundingBox: Rect.fromLTWH(
+        (json['x'] as num).toDouble(),
+        (json['y'] as num).toDouble(),
+        (json['width'] as num).toDouble(),
+        (json['height'] as num).toDouble(),
+      ),
+      rotation: f.rotation,
+      style: f.style,
+      layer: f.layer,
+      isLocked: f.isLocked,
+      isVisible: f.isVisible,
+      createdAt: f.createdAt,
+      topLeftRadius: (json['topLeftRadius'] as num?)?.toDouble() ?? 0.0,
+      topRightRadius: (json['topRightRadius'] as num?)?.toDouble() ?? 0.0,
+      bottomRightRadius: (json['bottomRightRadius'] as num?)?.toDouble() ?? 0.0,
+      bottomLeftRadius: (json['bottomLeftRadius'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
@@ -315,7 +339,7 @@ class ShapeFactory {
   static ImageShape _parseImage(Map<String, dynamic> json) {
     final imageBytesStr = json['imageBytes'] as String?;
     if (imageBytesStr == null || imageBytesStr.isEmpty) {
-      throw ArgumentError(
+      throw FormatException(
         'Image shape "${json['id']}" is missing required field "imageBytes". '
         'The project file may be corrupted or from an older version.',
       );

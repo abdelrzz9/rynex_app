@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/services/project_storage_service.dart';
@@ -13,6 +14,8 @@ final activeProjectProvider = StateNotifierProvider<ActiveProjectNotifier, Proje
     return ActiveProjectNotifier(storage, ref);
   },
 );
+
+final saveErrorProvider = StateProvider<String?>((ref) => null);
 
 class ActiveProjectNotifier extends StateNotifier<Project?> {
   final ProjectStorageService _storage;
@@ -70,13 +73,17 @@ class ActiveProjectNotifier extends StateNotifier<Project?> {
     if (state == null) return;
     try {
       await _storage.saveProject(state!);
-    } on Exception catch (_) {}
+      _ref.read(saveErrorProvider.notifier).state = null;
+    } on Object catch (e) {
+      debugPrint('Failed to save project: $e');
+      _ref.read(saveErrorProvider.notifier).state = 'Failed to save project. Check available storage.';
+    }
   }
 
   @override
   void dispose() {
     _saveTimer?.cancel();
-    _save();
+    unawaited(_save().then((_) {}).catchError((_) {}));
     super.dispose();
   }
 }

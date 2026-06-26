@@ -59,6 +59,7 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
   Offset? _resizeStartWorldPoint;
 
   bool get _isShiftPressed => HardwareKeyboard.instance.isShiftPressed;
+  bool get _isCtrlPressed => HardwareKeyboard.instance.isControlPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -236,7 +237,9 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
     if (handle != null) {
       final selection = ref.read(selectionProvider);
       final selectedId = selection.selectedIds.first;
-      final shape = shapes.firstWhere((s) => s.id == selectedId);
+      final idx = shapes.indexWhere((s) => s.id == selectedId);
+      if (idx == -1) return;
+      final shape = shapes[idx];
       _resizeShapeId = selectedId;
       _resizeOldState = shape;
       _resizeStartWorldPoint = worldPoint;
@@ -379,7 +382,9 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
       final shapes = ref.read(shapeListProvider);
       final commands = <Command>[];
       for (final entry in overrides.entries) {
-        final shape = shapes.firstWhere((s) => s.id == entry.key);
+        final idx = shapes.indexWhere((s) => s.id == entry.key);
+        if (idx == -1) continue;
+        final shape = shapes[idx];
         final newBoxOld = shape.boundingBox.translate(entry.value.dx, entry.value.dy);
         final updated = shape.copyWith(boundingBox: newBoxOld);
         commands.add(ModifyShapeCommand(
@@ -412,13 +417,13 @@ class _CanvasGestureHandlerState extends ConsumerState<CanvasGestureHandler> {
     final hitShape = _hitTestTopmost(shapes, worldPoint);
 
     if (hitShape != null) {
-      if (_isShiftPressed) {
+      if (_isShiftPressed || _isCtrlPressed) {
         ref.read(selectionProvider.notifier).toggleSelect(hitShape.id);
       } else {
         ref.read(selectionProvider.notifier).select(hitShape.id);
       }
     } else {
-      if (!_isShiftPressed) {
+      if (!_isShiftPressed && !_isCtrlPressed) {
         ref.read(selectionProvider.notifier).deselectAll();
       }
     }

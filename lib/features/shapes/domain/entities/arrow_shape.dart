@@ -19,6 +19,7 @@ class ArrowShape extends ShapeEntity {
     required this.endPoint,
     this.startArrowhead = ArrowheadStyle.none,
     this.endArrowhead = ArrowheadStyle.triangle,
+    super.rotation,
     super.style,
     super.layer,
     super.isLocked,
@@ -27,7 +28,6 @@ class ArrowShape extends ShapeEntity {
   }) : super(
           type: ShapeType.arrow,
           boundingBox: Rect.fromPoints(startPoint, endPoint),
-          rotation: 0.0,
         );
 
   double get length => (endPoint - startPoint).distance;
@@ -46,6 +46,7 @@ class ArrowShape extends ShapeEntity {
         'startY': startPoint.dy,
         'endX': endPoint.dx,
         'endY': endPoint.dy,
+        'rotation': rotation,
         'startArrowhead': startArrowhead.name,
         'endArrowhead': endArrowhead.name,
         'strokeColor': style.strokeColor.toARGB32(),
@@ -80,6 +81,7 @@ class ArrowShape extends ShapeEntity {
       endPoint: endPoint ?? this.endPoint,
       startArrowhead: startArrowhead ?? this.startArrowhead,
       endArrowhead: endArrowhead ?? this.endArrowhead,
+      rotation: rotation ?? this.rotation,
       style: style ?? this.style,
       layer: layer ?? this.layer,
       isLocked: isLocked ?? this.isLocked,

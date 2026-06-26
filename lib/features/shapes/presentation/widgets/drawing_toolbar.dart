@@ -128,7 +128,7 @@ class DrawingToolbar extends ConsumerWidget {
       case DrawingTool.brush:
         return Icons.brush;
       case DrawingTool.eraser:
-        return Icons.auto_fix_high;
+        return Icons.auto_fix_normal;
       case DrawingTool.rectangle:
         return Icons.rectangle_outlined;
       case DrawingTool.roundedRect:

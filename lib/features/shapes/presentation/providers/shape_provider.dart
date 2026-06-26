@@ -40,6 +40,7 @@ class ShapeListNotifier extends StateNotifier<List<ShapeEntity>> {
   }
 
   void bringToFront(String id) {
+    if (state.isEmpty) return;
     final maxOrder = state.map((s) => s.layer.order).reduce(
       (a, b) => a > b ? a : b,
     );
@@ -47,6 +48,7 @@ class ShapeListNotifier extends StateNotifier<List<ShapeEntity>> {
   }
 
   void sendToBack(String id) {
+    if (state.isEmpty) return;
     final minOrder = state.map((s) => s.layer.order).reduce(
       (a, b) => a < b ? a : b,
     );

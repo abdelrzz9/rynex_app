@@ -79,6 +79,8 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   Future<void> _save() async {
     try {
       await _storage.save(state);
-    } on Exception catch (_) {}
+    } on Object catch (e) {
+      debugPrint('Failed to save settings: $e');
+    }
   }
 }

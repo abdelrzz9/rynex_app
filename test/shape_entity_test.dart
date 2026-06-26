@@ -244,7 +244,7 @@ void main() {
           json['text'] = 'Test';
         }
         if (type == ShapeType.image) {
-          json['imageBytes'] = <int>[];
+          json['imageBytes'] = 'AAAA';
           json['originalWidth'] = 100.0;
           json['originalHeight'] = 50.0;
         }

@@ -35,11 +35,15 @@ class ProjectStorageService {
   }
 
   Future<Project?> loadProject(String id) async {
-    final dir = await _getDir();
-    final file = File('${dir.path}/${_filePath(id)}');
-    if (!await file.exists()) return null;
-    final data = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
-    return _parseProject(data);
+    try {
+      final dir = await _getDir();
+      final file = File('${dir.path}/${_filePath(id)}');
+      if (!await file.exists()) return null;
+      final data = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+      return _parseProject(data);
+    } on Object catch (_) {
+      return null;
+    }
   }
 
   Future<void> deleteProject(String id) async {
@@ -66,22 +70,26 @@ class ProjectStorageService {
           thumbnailPath: data['thumbnailPath'] as String?,
           shapeCount: (data['shapes'] as List).length,
         ));
-      } on Exception catch (_) {}
+      } on Object catch (_) {}
     }
     summaries.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return summaries;
   }
 
   Project _parseProject(Map<String, dynamic> data) {
-    final shapesData = data['shapes'] as List;
-    final shapes = shapesData.map((s) => ShapeFactory.fromJson(s as Map<String, dynamic>)).toList();
-    return Project(
-      id: data['id'] as String,
-      name: data['name'] as String,
-      createdAt: DateTime.parse(data['createdAt'] as String),
-      updatedAt: DateTime.parse(data['updatedAt'] as String),
-      thumbnailPath: data['thumbnailPath'] as String?,
-      shapes: shapes,
-    );
+    try {
+      final shapesData = data['shapes'] as List;
+      final shapes = shapesData.map((s) => ShapeFactory.fromJson(s as Map<String, dynamic>)).toList();
+      return Project(
+        id: data['id'] as String,
+        name: data['name'] as String,
+        createdAt: DateTime.parse(data['createdAt'] as String),
+        updatedAt: DateTime.parse(data['updatedAt'] as String),
+        thumbnailPath: data['thumbnailPath'] as String?,
+        shapes: shapes,
+      );
+    } on Object catch (_) {
+      rethrow;
+    }
   }
 }

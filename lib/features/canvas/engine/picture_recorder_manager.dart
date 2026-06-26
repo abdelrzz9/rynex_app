@@ -1,15 +1,20 @@
 import 'dart:ui' as ui;
 
 class PictureRecorderManager {
-  final Map<String, ui.Picture> _cache = {};
+  static const int _maxCacheSize = 200;
+
+  final _cache = <String, ui.Picture>{};
   final Set<String> _dirtyIds = {};
-  final Map<String, ui.Image> _imageCache = {};
+  final _imageCache = <String, ui.Image>{};
 
   ui.Picture? get(String id) {
-    if (_dirtyIds.contains(id)) {
-      return null;
+    if (_dirtyIds.contains(id)) return null;
+    final picture = _cache[id];
+    if (picture != null) {
+      _cache.remove(id);
+      _cache[id] = picture;
     }
-    return _cache[id];
+    return picture;
   }
 
   void markDirty(String id) {
@@ -24,6 +29,7 @@ class PictureRecorderManager {
     _cache[id]?.dispose();
     _cache[id] = picture;
     _dirtyIds.remove(id);
+    _evictIfNeeded();
   }
 
   void remove(String id) {
@@ -36,11 +42,32 @@ class PictureRecorderManager {
 
   bool isDirty(String id) => _dirtyIds.contains(id);
 
-  ui.Image? getImage(String id) => _imageCache[id];
+  ui.Image? getImage(String id) {
+    final image = _imageCache[id];
+    if (image != null) {
+      _imageCache.remove(id);
+      _imageCache[id] = image;
+    }
+    return image;
+  }
 
   void cacheImage(String id, ui.Image image) {
     _imageCache[id]?.dispose();
     _imageCache[id] = image;
+    if (_imageCache.length > _maxCacheSize) {
+      final eldest = _imageCache.keys.first;
+      _imageCache[eldest]?.dispose();
+      _imageCache.remove(eldest);
+    }
+  }
+
+  void _evictIfNeeded() {
+    while (_cache.length > _maxCacheSize) {
+      final eldest = _cache.keys.first;
+      _cache[eldest]?.dispose();
+      _cache.remove(eldest);
+      _dirtyIds.remove(eldest);
+    }
   }
 
   void clear() {
